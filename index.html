@@ -1305,14 +1305,19 @@ function render(){
     ctx.globalAlpha = 1;
   }
 
-  // hover ghost — dot plus the exact lines it would create
+  // hover ghost — dot plus the exact lines it would create.
+  // Uses currentPlayer, not HUMAN: the ghost must be the colour of whoever
+  // is actually to move, so the previewed connections are the ones that
+  // would really form. (The ghost only draws while !locked, so this is
+  // always the local player — Red online, or Player 2 in pass-and-play.)
   if (hover && !locked){
+    const hp = currentPlayer;
     const hx = w2sX(hover.x * CELL), hy = w2sY(hover.y * CELL);
     if (hover.valid){
-      const eds = G.newEdges(hover.x, hover.y, HUMAN);
+      const eds = G.newEdges(hover.x, hover.y, hp);
       ctx.save();
       ctx.setLineDash([4, 4]); ctx.lineWidth = 1.6;
-      ctx.strokeStyle = COL[HUMAN]; ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = COL[hp]; ctx.globalAlpha = 0.5;
       ctx.beginPath();
       for (const e of eds){
         let x1, y1, x2, y2;
@@ -1325,7 +1330,7 @@ function render(){
       }
       ctx.stroke(); ctx.restore();
       ctx.beginPath(); ctx.arc(hx, hy, dotR, 0, Math.PI * 2);
-      ctx.fillStyle = COL[HUMAN]; ctx.globalAlpha = 0.45; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.fillStyle = COL[hp]; ctx.globalAlpha = 0.45; ctx.fill(); ctx.globalAlpha = 1;
     } else {
       ctx.strokeStyle = 'rgba(32,38,58,.45)'; ctx.lineWidth = 1.6;
       ctx.beginPath();
