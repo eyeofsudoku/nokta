@@ -91,6 +91,28 @@
   .seg button:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
   #diffSeg.isHidden{display:none}
 
+  #netBox{margin-top:9px;padding:9px 10px;border-radius:9px;background:rgba(32,38,58,.06)}
+  #netBox.isHidden{display:none}
+  #netStatus{font-size:11px;font-weight:600;color:var(--ink-soft);margin-bottom:7px}
+  #netStatus.live{color:var(--blue)}
+  #netStatus.err{color:var(--red)}
+  #netCodeWrap{margin-bottom:8px}
+  #netCodeLabel{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
+  #netCode{
+    font-family:var(--font-display);font-size:24px;font-weight:800;
+    letter-spacing:.22em;color:var(--ink);margin-top:2px;user-select:all;
+  }
+  #netActions{display:flex;flex-direction:column;gap:6px}
+  #netJoinRow{display:flex;gap:5px}
+  #joinInput{
+    flex:1;min-width:0;font:inherit;font-size:12px;font-weight:700;letter-spacing:.16em;
+    text-transform:uppercase;text-align:center;color:var(--ink);
+    background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 4px;
+  }
+  #joinInput:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+  #netBox button{width:100%}
+  #netJoinRow button{width:auto;flex:none}
+
   #muteBtn{
     position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;
     border:1px solid var(--line);background:#fff;cursor:pointer;font-size:12px;line-height:1;
@@ -162,11 +184,27 @@
   <div class="seg" id="modeSeg" role="group" aria-label="Game mode">
     <button type="button" data-mode="ai" class="active">Vs AI</button>
     <button type="button" data-mode="pvp">2 Players</button>
+    <button type="button" data-mode="online">Online</button>
   </div>
   <div class="seg" id="diffSeg" role="group" aria-label="AI difficulty">
     <button type="button" data-diff="easy">Easy</button>
     <button type="button" data-diff="medium" class="active">Medium</button>
     <button type="button" data-diff="hard">Hard</button>
+  </div>
+
+  <div id="netBox" class="isHidden">
+    <div id="netStatus">Not connected</div>
+    <div id="netCodeWrap" hidden>
+      <div id="netCodeLabel">Room code — share this</div>
+      <div id="netCode">····</div>
+    </div>
+    <div id="netActions">
+      <button type="button" id="createBtn">Create room</button>
+      <div id="netJoinRow">
+        <input id="joinInput" maxlength="4" placeholder="CODE" aria-label="Room code" autocomplete="off" spellcheck="false">
+        <button type="button" id="joinBtn">Join</button>
+      </div>
+    </div>
   </div>
 
   <div id="controls">
@@ -190,6 +228,7 @@
 
 <div class="panel" id="hint"><b>Click</b> place &middot; <b>drag</b> pan &middot; <b>scroll</b> zoom &middot; close a loop to claim territory &middot; every 10 colonized area = +1 move</div>
 
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
 /*==LOGIC==*/
 /* ================================================================
@@ -668,7 +707,7 @@ let W = 0, H = 0, dpr = 1;
 let dirty = true, minimapDirty = true;
 let hover = null;                   // {x,y,valid}
 let locked = false;                 // input off during AI turn
-let mode = 'ai';                    // 'ai' | 'pvp' (local pass-and-play)
+let mode = 'ai';                    // 'ai' | 'pvp' (local pass-and-play) | 'online' (WebRTC)
 let aiDifficulty = 'medium';        // 'easy' | 'medium' | 'hard'
 let currentPlayer = HUMAN;          // whose turn it is, either mode
 let movesLeft = 1, aiTotal = 1, aiMade = 0;
@@ -689,6 +728,14 @@ const muteBtn = document.getElementById('muteBtn');
 const logBtn = document.getElementById('logBtn');
 const logPanel = document.getElementById('logPanel');
 const logList = document.getElementById('logList');
+const netBox = document.getElementById('netBox');
+const netStatus = document.getElementById('netStatus');
+const netCode = document.getElementById('netCode');
+const netCodeWrap = document.getElementById('netCodeWrap');
+const createBtn = document.getElementById('createBtn');
+const joinBtn = document.getElementById('joinBtn');
+const joinInput = document.getElementById('joinInput');
+const sizeSel = document.getElementById('sizeSel');
 
 /* ---------------- sound (synthesized, no audio files) -------------- */
 let muted = false;
@@ -755,6 +802,11 @@ function setPill(text, ai){
   pill.classList.toggle('ai', !!ai);
 }
 function updateWhoLabels(){
+  if (mode === 'online'){
+    whoBlue.textContent = net.myPl === HUMAN ? 'You\u00A0(Blue)' : 'Opponent';
+    whoRed.textContent  = net.myPl === AIP   ? 'You\u00A0(Red)'  : 'Opponent';
+    return;
+  }
   whoBlue.textContent = mode === 'pvp' ? 'Player 1' : 'You';
   whoRed.textContent  = mode === 'pvp' ? 'Player 2' : 'Red\u00A0(AI)';
 }
@@ -804,9 +856,20 @@ function startTurn(pl){
     aiTotal = movesLeft; aiMade = 0;
     setPill(aiTotal > 1 ? `Red is thinking\u2026 (1/${aiTotal})` : 'Red is thinking\u2026', true);
     aiTurn();
+  } else if (mode === 'online'){
+    if (!net.connected){
+      locked = true;
+      setPill('Create or join a room', false);
+    } else {
+      const mine = pl === net.myPl;
+      locked = !mine;                       // opponent's turn: input off
+      const label = turnLabel(pl);
+      setPill(movesLeft > 1 ? `${label} \u2014 ${movesLeft} moves`
+                            : `${label} \u2014 ${mine ? 'place a dot' : 'waiting\u2026'}`, !mine);
+    }
   } else {
     locked = false;
-    const label = mode === 'pvp' ? (pl === HUMAN ? 'Player 1' : 'Player 2') + '\u2019s turn' : 'Your turn';
+    const label = turnLabel(pl);
     setPill(movesLeft > 1 ? `${label} \u2014 ${movesLeft} moves` : `${label} \u2014 place a dot`, false);
   }
   dirty = true;
@@ -852,19 +915,39 @@ function renderLog(){
   logList.innerHTML = html;
 }
 
-function onBoardClick(gx, gy){
-  if (locked || !game.canPlace(gx, gy)) return;
+// Single code path for applying a placement, used by BOTH the local click
+// and an incoming networked move. Keeping one path is what keeps the two
+// peers deterministic: same move sequence in, same board state out.
+function doMove(gx, gy, pl){
+  if (!game.canPlace(gx, gy)) return false;
   const before = game.owner.slice();
-  const pl = currentPlayer;
   const r = game.place(gx, gy, pl);
+  if (!r) return false;
   afterPlace(gx, gy, pl, r, before);
   movesLeft--;
   if (movesLeft > 0){
-    const label = mode === 'pvp' ? (pl === HUMAN ? 'Player 1' : 'Player 2') + '\u2019s turn' : 'Your turn';
-    setPill(`${label} \u2014 ${movesLeft} move${movesLeft > 1 ? 's' : ''} left`, false);
+    setPill(`${turnLabel(pl)} \u2014 ${movesLeft} move${movesLeft > 1 ? 's' : ''} left`, false);
   } else {
     startTurn(oppOf(pl));
   }
+  return true;
+}
+
+function turnLabel(pl){
+  if (mode === 'pvp') return (pl === HUMAN ? 'Player 1' : 'Player 2') + '\u2019s turn';
+  if (mode === 'online') return pl === net.myPl ? 'Your turn' : 'Opponent\u2019s turn';
+  return 'Your turn';
+}
+
+function onBoardClick(gx, gy){
+  if (locked || !game.canPlace(gx, gy)) return;
+  // online: you may only ever move as your own colour
+  if (mode === 'online' && (!net.connected || currentPlayer !== net.myPl)) return;
+  const pl = currentPlayer;
+  if (!doMove(gx, gy, pl)) return;
+  // send AFTER applying locally — each dot goes out the moment it's placed,
+  // so a multi-move turn appears live on the other side rather than in one lump
+  if (mode === 'online') netSend({ t: 'm', x: gx, y: gy, pl });
 }
 
 function aiTurn(){
@@ -894,6 +977,110 @@ function panToIfOffscreen(gx, gy){
   if (sx < m || sy < m || sx > W - m || sy > H - m){
     camTween = { x: gx * CELL, y: gy * CELL, from: { x: camX, y: camY }, t0: performance.now() };
   }
+}
+
+/* ---------------- online play (WebRTC via PeerJS) ------------------
+   Only moves travel over the wire — {t:'m',x,y,pl} — never board state.
+   Both peers run the identical deterministic engine, so replaying the
+   same move sequence reproduces the same board on both sides. The host
+   is Blue and owns "new game"; the guest mirrors it. Sending happens
+   per-dot, so a bonus-move turn shows up live rather than all at once. */
+const net = { peer: null, conn: null, isHost: false, myPl: null, connected: false, code: null };
+
+function netSetStatus(text, kind){
+  netStatus.textContent = text;
+  netStatus.classList.toggle('live', kind === 'live');
+  netStatus.classList.toggle('err', kind === 'err');
+}
+
+function netSend(msg){
+  if (net.conn && net.conn.open){
+    try { net.conn.send(msg); } catch (e){ netSetStatus('Send failed', 'err'); }
+  }
+}
+
+function makeCode(){
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 — spoken over a call
+  let s = '';
+  for (let i = 0; i < 4; i++) s += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return s;
+}
+
+function netTeardown(){
+  if (net.conn){ try { net.conn.close(); } catch (e){} }
+  if (net.peer){ try { net.peer.destroy(); } catch (e){} }
+  net.peer = null; net.conn = null; net.connected = false; net.myPl = null; net.code = null;
+}
+
+function wireConn(conn){
+  net.conn = conn;
+  conn.on('open', () => {
+    net.connected = true;
+    netSetStatus(net.isHost ? 'Connected — you are Blue' : 'Connected — you are Red', 'live');
+    createBtn.disabled = true; joinBtn.disabled = true; joinInput.disabled = true;
+    updateWhoLabels();
+    if (net.isHost) netSend({ t: 'start', size: parseInt(sizeSel.value, 10) });
+    newGame();
+  });
+  conn.on('data', msg => {
+    if (!msg || typeof msg !== 'object') return;
+    if (msg.t === 'm'){
+      // guard: only accept the colour that peer is allowed to play
+      if (msg.pl === net.myPl) return;
+      if (msg.pl !== currentPlayer) return;
+      if (doMove(msg.x, msg.y, msg.pl)) panToIfOffscreen(msg.x, msg.y);
+    } else if (msg.t === 'start' && !net.isHost){
+      sizeSel.value = String(msg.size);
+      newGame();
+    }
+  });
+  conn.on('close', () => {
+    net.connected = false;
+    netSetStatus('Opponent disconnected', 'err');
+    createBtn.disabled = false; joinBtn.disabled = false; joinInput.disabled = false;
+    locked = true; dirty = true;
+  });
+  conn.on('error', () => netSetStatus('Connection error', 'err'));
+}
+
+function createRoom(){
+  if (typeof Peer === 'undefined'){ netSetStatus('PeerJS failed to load — need internet', 'err'); return; }
+  netTeardown();
+  net.isHost = true; net.myPl = HUMAN;
+  const code = makeCode();
+  net.code = code;
+  netSetStatus('Opening room\u2026');
+  net.peer = new Peer('nokta-v1-' + code);
+  net.peer.on('open', () => {
+    netCode.textContent = code;
+    netCodeWrap.hidden = false;
+    netSetStatus('Waiting for opponent\u2026');
+  });
+  net.peer.on('connection', conn => {
+    if (net.conn && net.conn.open){ try { conn.close(); } catch (e){} return; } // one guest only
+    wireConn(conn);
+  });
+  net.peer.on('error', err => {
+    if (err && err.type === 'unavailable-id') netSetStatus('Code taken — try again', 'err');
+    else netSetStatus('Network error — retry', 'err');
+  });
+}
+
+function joinRoom(){
+  if (typeof Peer === 'undefined'){ netSetStatus('PeerJS failed to load — need internet', 'err'); return; }
+  const code = (joinInput.value || '').trim().toUpperCase();
+  if (code.length !== 4){ netSetStatus('Enter the 4-character code', 'err'); return; }
+  netTeardown();
+  net.isHost = false; net.myPl = AIP;
+  net.code = code;
+  netCodeWrap.hidden = true;
+  netSetStatus('Connecting\u2026');
+  net.peer = new Peer();
+  net.peer.on('open', () => wireConn(net.peer.connect('nokta-v1-' + code, { reliable: true })));
+  net.peer.on('error', err => {
+    if (err && err.type === 'peer-unavailable') netSetStatus('No room with that code', 'err');
+    else netSetStatus('Network error — retry', 'err');
+  });
 }
 
 function newGame(){
@@ -1323,8 +1510,19 @@ mini.addEventListener('pointermove', e => { if (miniDown) miniJump(e); });
 mini.addEventListener('pointerup',   e => { miniDown = false; });
 mini.addEventListener('pointercancel', () => { miniDown = false; });
 
-document.getElementById('newBtn').addEventListener('click', newGame);
-document.getElementById('sizeSel').addEventListener('change', newGame);
+// Online, only the host may restart or change board size — otherwise the two
+// peers would silently diverge onto different boards.
+function requestNewGame(){
+  if (mode === 'online' && net.connected && !net.isHost){
+    netSetStatus('Only the host can start a new game', 'err');
+    return;
+  }
+  if (mode === 'online' && net.connected && net.isHost)
+    netSend({ t: 'start', size: parseInt(sizeSel.value, 10) });
+  newGame();
+}
+document.getElementById('newBtn').addEventListener('click', requestNewGame);
+sizeSel.addEventListener('change', requestNewGame);
 
 const modeSeg = document.getElementById('modeSeg');
 const diffSeg = document.getElementById('diffSeg');
@@ -1335,9 +1533,20 @@ modeSeg.addEventListener('click', e => {
   [...modeSeg.children].forEach(b => b.classList.toggle('active', b === btn));
   mode = btn.dataset.mode;
   diffSeg.classList.toggle('isHidden', mode !== 'ai');
+  netBox.classList.toggle('isHidden', mode !== 'online');
+  if (mode !== 'online'){
+    netTeardown();
+    createBtn.disabled = false; joinBtn.disabled = false; joinInput.disabled = false;
+    netCodeWrap.hidden = true;
+    netSetStatus('Not connected');
+  }
   updateWhoLabels();
   newGame();
 });
+
+createBtn.addEventListener('click', createRoom);
+joinBtn.addEventListener('click', joinRoom);
+joinInput.addEventListener('keydown', e => { if (e.key === 'Enter') joinRoom(); });
 
 diffSeg.addEventListener('click', e => {
   const btn = e.target.closest('button[data-diff]');
