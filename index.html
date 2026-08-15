@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>NOKTA — grid territory duel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@800&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue:#233bd1;
+    --red:#c31f3f;
+    --ink:#20263a;
+    --ink-soft:rgba(32,38,58,.62);
+    --paper:#f7f4ea;
+    --desk:#e6e1d2;
+    --line:rgba(32,38,58,.14);
+    --font-ui:'Inter','Avenir Next','Segoe UI',system-ui,-apple-system,sans-serif;
+    --font-display:'Bricolage Grotesque','Avenir Next',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden}
+  body{
+    font-family:var(--font-ui);
+    background:var(--desk);color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;
+  }
+  #board{position:fixed;inset:0;cursor:crosshair;touch-action:none;display:block}
+
+  .panel{
+    position:fixed;background:rgba(252,250,243,.94);
+    border:1px solid var(--line);border-radius:12px;
+    box-shadow:0 8px 28px rgba(32,38,58,.12);
+    backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+  }
+
+  #hud{top:14px;left:14px;padding:13px 15px 12px;width:236px;user-select:none}
+  #hud h1{
+    font-family:var(--font-display);
+    font-size:22px;font-weight:800;letter-spacing:.14em;line-height:1;
+  }
+  #hud h1 span{color:var(--blue)}
+  #hud .sub{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin:3px 0 11px}
+
+  .score{display:flex;align-items:baseline;gap:8px;margin-top:7px}
+  .score .dot{width:9px;height:9px;border-radius:50%;flex:none;align-self:center}
+  .score .who{font-size:12px;font-weight:600;width:64px}
+  .score .val{font-variant-numeric:tabular-nums;font-size:19px;font-weight:800;margin-left:auto}
+  .score .unit{font-size:10px;color:var(--ink-soft)}
+  .meta{font-size:10.5px;color:var(--ink-soft);margin:1px 0 4px 17px;font-variant-numeric:tabular-nums}
+
+  #turnPill{
+    margin-top:10px;padding:6px 10px;border-radius:8px;text-align:center;
+    font-size:12px;font-weight:700;letter-spacing:.02em;
+    background:rgba(30,50,229,.09);color:var(--blue);
+    transition:background .25s,color .25s;
+  }
+  #turnPill.ai{background:var(--ink);color:#f7f4ea}
+
+  #controls{display:flex;gap:7px;margin-top:10px}
+  button,select{
+    font:inherit;font-size:11.5px;font-weight:600;color:var(--ink);
+    background:#fff;border:1px solid var(--line);border-radius:8px;
+    padding:6px 10px;cursor:pointer;
+  }
+  button:hover{border-color:rgba(32,38,58,.4)}
+  button:focus-visible,select:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+  #newBtn{flex:1;background:var(--ink);color:#f7f4ea;border-color:var(--ink)}
+
+  #miniWrap{top:14px;right:14px;padding:7px}
+  #mini{display:block;border-radius:7px;cursor:pointer;touch-action:none}
+  #miniLabel{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-soft);text-align:center;margin-top:5px}
+
+  #hint{
+    bottom:14px;left:50%;transform:translateX(-50%);
+    padding:7px 14px;font-size:11px;color:var(--ink-soft);
+    letter-spacing:.03em;white-space:nowrap;border-radius:999px;
+  }
+  #hint b{color:var(--ink);font-weight:600}
+
+  .seg{display:flex;gap:4px;margin-top:9px;background:rgba(32,38,58,.06);padding:3px;border-radius:9px}
+  .seg button{
+    flex:1;border:none;background:transparent;padding:6px 4px;border-radius:7px;
+    font:inherit;font-size:11px;font-weight:700;color:var(--ink-soft);cursor:pointer;
+    letter-spacing:.01em;transition:background .15s,color .15s;
+  }
+  .seg button.active{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(32,38,58,.18)}
+  .seg button:hover:not(.active){color:var(--ink)}
+  .seg button:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+  #diffSeg.isHidden{display:none}
+
+  #muteBtn{
+    position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;
+    border:1px solid var(--line);background:#fff;cursor:pointer;font-size:12px;line-height:1;
+    display:flex;align-items:center;justify-content:center;padding:0;color:var(--ink);
+  }
+  #muteBtn:hover{border-color:rgba(32,38,58,.4)}
+  #muteBtn:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+
+  #logBtn{
+    position:absolute;top:12px;right:44px;width:26px;height:26px;border-radius:50%;
+    border:1px solid var(--line);background:#fff;cursor:pointer;font-size:12px;line-height:1;
+    display:flex;align-items:center;justify-content:center;padding:0;color:var(--ink);
+  }
+  #logBtn:hover{border-color:rgba(32,38,58,.4)}
+  #logBtn:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+  #logBtn.on{background:var(--ink);color:#f7f4ea;border-color:var(--ink)}
+
+  #logPanel{
+    position:absolute;top:100%;left:0;margin-top:8px;width:236px;max-height:280px;
+    overflow-y:auto;padding:10px 12px;
+  }
+  #logPanel[hidden]{display:none}
+  #logPanel h2{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px}
+  .logEntry{padding:5px 0;border-top:1px solid var(--line)}
+  .logEntry:first-child{border-top:none}
+  .logEntry .who{font-weight:700;font-size:11.5px}
+  .logEntry .detail{font-size:10px;color:var(--ink-soft);margin-top:1px;font-variant-numeric:tabular-nums}
+
+  @media (max-width:640px){
+    #hud{width:196px;padding:10px 12px}
+    #hud h1{font-size:17px}
+    #mini{width:104px!important;height:104px!important}
+    #hint{display:none}
+    .seg button{font-size:9.5px;padding:5px 2px}
+    #muteBtn{width:22px;height:22px;top:9px;right:9px;font-size:10.5px}
+    #logBtn{width:22px;height:22px;top:9px;right:37px;font-size:10.5px}
+    #logPanel{width:196px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    #turnPill{transition:none}
+  }
+</style>
+</head>
+<body>
+<canvas id="board"></canvas>
+
+<div class="panel" id="hud">
+  <button id="muteBtn" aria-label="Mute sound" aria-pressed="false" title="Mute sound">🔊</button>
+  <button id="logBtn" aria-label="Capture log" aria-pressed="false" title="Capture log">📜</button>
+  <h1>NOK<span>TA</span></h1>
+  <div class="sub">grid territory duel</div>
+
+  <div class="score">
+    <span class="dot" style="background:var(--blue)"></span>
+    <span class="who" id="whoBlue">You</span>
+    <span class="val" id="sBlue">0</span><span class="unit">area</span>
+  </div>
+  <div class="meta" id="mBlue">colonized 0 &middot; 1 move/turn</div>
+
+  <div class="score">
+    <span class="dot" style="background:var(--red)"></span>
+    <span class="who" id="whoRed">Red&nbsp;(AI)</span>
+    <span class="val" id="sRed">0</span><span class="unit">area</span>
+  </div>
+  <div class="meta" id="mRed">colonized 0 &middot; 1 move/turn</div>
+
+  <div id="turnPill">Your turn — place a dot</div>
+
+  <div class="seg" id="modeSeg" role="group" aria-label="Game mode">
+    <button type="button" data-mode="ai" class="active">Vs AI</button>
+    <button type="button" data-mode="pvp">2 Players</button>
+  </div>
+  <div class="seg" id="diffSeg" role="group" aria-label="AI difficulty">
+    <button type="button" data-diff="easy">Easy</button>
+    <button type="button" data-diff="medium" class="active">Medium</button>
+    <button type="button" data-diff="hard">Hard</button>
+  </div>
+
+  <div id="controls">
+    <button id="newBtn">New game</button>
+    <select id="sizeSel" aria-label="Board size">
+      <option value="150" selected>150 × 150</option>
+      <option value="300">300 × 300</option>
+    </select>
+  </div>
+
+  <div class="panel" id="logPanel" hidden>
+    <h2>Capture log</h2>
+    <div id="logList"></div>
+  </div>
+</div>
+
+<div class="panel" id="miniWrap">
+  <canvas id="mini" width="156" height="156" style="width:156px;height:156px"></canvas>
+  <div id="miniLabel">tap to jump</div>
+</div>
+
+<div class="panel" id="hint"><b>Click</b> place &middot; <b>drag</b> pan &middot; <b>scroll</b> zoom &middot; close a loop to claim territory &middot; every 10 colonized area = +1 move</div>
+
+<script>
+/*==LOGIC==*/
+/* ================================================================
+   GAME LOGIC — DOM-free, unit-testable.
+
+   Geometry model (screen coordinates, y grows down):
+   - Board of N×N unit squares, (N+1)×(N+1) lattice points.
+   - Square (sx,sy): TL=(sx,sy) TR=(sx+1,sy) BR=(sx+1,sy+1) BL=(sx,sy+1)
+   - Each square is decomposed into 4 atomic quarter-triangles that
+     meet at the square's center M (area 0.25 each):
+       t=0 N (TL,TR,M)   t=1 E (TR,BR,M)   t=2 S (BR,BL,M)   t=3 W (BL,TL,M)
+   - Edge slots (single owner each, so two players can never share
+     or cross on the same slot):
+       hE[y*P+x] : (x,y)-(x+1,y)          x<N
+       vE[y*P+x] : (x,y)-(x,y+1)          y<N
+       dA[sy*N+sx] : TL-BR  "\"  — separates {N,E} | {S,W}, i.e. blocks N<->W and E<->S
+       dB[sy*N+sx] : TR-BL  "/"  — separates {N,W} | {E,S}, i.e. blocks N<->E and S<->W
+     In this constrained geometry the ONLY possible segment crossing
+     is dA vs dB inside the same square (all other segment pairs meet
+     at endpoints at most), so the crossing rule is: a diagonal is
+     illegal iff the opposite diagonal of that square exists.
+
+   Territory (face detection): after a player pl adds lines, flood-fill
+   the quarter-triangle graph from the OUTSIDE, treating only pl's
+   edges as barriers. Every cell not reached and not already pl's
+   becomes pl territory. This is planar face detection on a fixed
+   embedding, and it inherently handles: concave shapes, nested loops,
+   merging (union by ownership), triangle->square upgrades (0.5 -> 1.0),
+   colonization of opponent cells, and multiple simultaneous captures.
+   The board border is never a barrier, so loops must be fully closed
+   by drawn lines. Nothing is ever deleted: dots/edges inside claimed
+   territory stay in the data (future detection stays correct) and are
+   merely hidden by the renderer, derived from cell ownership.
+   ================================================================ */
+'use strict';
+
+const HUMAN = 1, AIP = 2;
+function oppOf(p){ return p === 1 ? 2 : 1; }
+
+class Game {
+  constructor(n){ this.reset(n); }
+
+  reset(n){
+    this.N = n;               // squares per side
+    this.P = n + 1;           // points per side
+    const N = n, P = this.P;
+    this.dots  = new Uint8Array(P * P);     // 0 empty / 1 blue / 2 red
+    this.hE    = new Uint8Array(P * P);     // horizontal edge owner
+    this.vE    = new Uint8Array(P * P);     // vertical edge owner
+    this.dA    = new Uint8Array(N * N);     // "\" diagonal owner
+    this.dB    = new Uint8Array(N * N);     // "/" diagonal owner
+    this.owner = new Uint8Array(N * N * 4); // quarter-cell owner
+    this.colFlag = new Uint8Array(N * N * 4); // was colonized at some point
+    this.visited = new Int32Array(N * N * 4); // flood epoch marks
+    this.stack   = new Int32Array(N * N * 4);
+    this.epoch = 0;
+    this.scoreQ = [0, 0, 0];  // quarter-cells owned, indexed by player
+    this.colQ   = [0, 0, 0];  // quarter-cells colonized (captured from opponent)
+    this.dotList = [];        // {x,y} for fast candidate generation
+    this.lastPlaced = [];     // recent placements for UI markers
+  }
+
+  pi(x, y){ return y * this.P + x; }
+  inP(x, y){ return x >= 0 && y >= 0 && x < this.P && y < this.P; }
+  inS(x, y){ return x >= 0 && y >= 0 && x < this.N && y < this.N; }
+
+  area(pl){ return this.scoreQ[pl] / 4; }
+  colArea(pl){ return this.colQ[pl] / 4; }
+  movesFor(pl){ return 1 + Math.floor(this.colQ[pl] / 40); } // 40 quarters = 10 area
+
+  /* ---- point <-> incident quarter-cells -------------------------- */
+  // The (up to 8) quarter-cells having lattice point (x,y) as a vertex.
+  incidentCells(x, y, cb){
+    const N = this.N;
+    // [square sx, square sy, tri a, tri b] — point's role in that square:
+    // TL -> N,W ; TR -> N,E ; BR -> E,S ; BL -> S,W
+    if (x < N     && y < N    ){ const b = (y * N + x) * 4;             cb(b + 0); cb(b + 3); } // TL of (x,y)
+    if (x > 0     && y < N    ){ const b = (y * N + (x - 1)) * 4;       cb(b + 0); cb(b + 1); } // TR of (x-1,y)
+    if (x > 0     && y > 0    ){ const b = ((y - 1) * N + (x - 1)) * 4; cb(b + 1); cb(b + 2); } // BR of (x-1,y-1)
+    if (x < N     && y > 0    ){ const b = ((y - 1) * N + x) * 4;       cb(b + 2); cb(b + 3); } // BL of (x,y-1)
+  }
+
+  pointInterior(x, y){ // strictly inside claimed territory -> placement blocked
+    let any = false, all = true;
+    this.incidentCells(x, y, c => { any = true; if (this.owner[c] === 0) all = false; });
+    return any && all;
+  }
+
+  pointTouchesTerritory(x, y){ // on or inside territory -> dot hidden
+    let t = false;
+    this.incidentCells(x, y, c => { if (this.owner[c] > 0) t = true; });
+    return t;
+  }
+
+  canPlace(x, y){
+    return this.inP(x, y) && this.dots[this.pi(x, y)] === 0 && !this.pointInterior(x, y);
+  }
+
+  /* ---- legal auto-connections ------------------------------------ */
+  // Edges a dot placed at (x,y) by pl would create. Non-mutating.
+  // Enforces: dx<=1, dy<=1, same-square corners only, no crossings.
+  newEdges(x, y, pl){
+    const res = [];
+    const { dots, dA, dB, P, N } = this;
+    const at = (px, py) => px >= 0 && py >= 0 && px < P && py < P && dots[py * P + px] === pl;
+
+    if (at(x + 1, y)) res.push({ t: 0, i: y * P + x });           // hE right
+    if (at(x - 1, y)) res.push({ t: 0, i: y * P + (x - 1) });     // hE left
+    if (at(x, y + 1)) res.push({ t: 1, i: y * P + x });           // vE down
+    if (at(x, y - 1)) res.push({ t: 1, i: (y - 1) * P + x });     // vE up
+
+    // Diagonals — blocked if the crossing (opposite) diagonal exists.
+    if (at(x + 1, y + 1) && this.inS(x, y)         && !dB[y * N + x])               res.push({ t: 2, i: y * N + x });               // p is TL, dA(x,y)
+    if (at(x - 1, y - 1) && this.inS(x - 1, y - 1) && !dB[(y - 1) * N + (x - 1)])   res.push({ t: 2, i: (y - 1) * N + (x - 1) });   // p is BR
+    if (at(x + 1, y - 1) && this.inS(x, y - 1)     && !dA[(y - 1) * N + x])         res.push({ t: 3, i: (y - 1) * N + x });         // p is BL, dB(x,y-1)
+    if (at(x - 1, y + 1) && this.inS(x - 1, y)     && !dA[y * N + (x - 1)])         res.push({ t: 3, i: y * N + (x - 1) });         // p is TR, dB(x-1,y)
+    return res;
+  }
+
+  _edgeArr(t){ return t === 0 ? this.hE : t === 1 ? this.vE : t === 2 ? this.dA : this.dB; }
+  applyEdges(list, pl){ for (const e of list) this._edgeArr(e.t)[e.i] = pl; }
+  revertEdges(list){ for (const e of list) this._edgeArr(e.t)[e.i] = 0; }
+
+  /* ---- planar face detection: flood from outside ----------------- */
+  flood(pl){
+    const { N, P, hE, vE, dA, dB, visited, stack } = this;
+    const ep = ++this.epoch;
+    let sp = 0;
+    const push = c => { if (visited[c] !== ep){ visited[c] = ep; stack[sp++] = c; } };
+
+    // Outside seeds — board border is never a barrier.
+    for (let sx = 0; sx < N; sx++){
+      if (hE[sx]           !== pl) push((sx) * 4 + 0);                 // top row, N tris
+      if (hE[N * P + sx]   !== pl) push(((N - 1) * N + sx) * 4 + 2);   // bottom row, S tris
+    }
+    for (let sy = 0; sy < N; sy++){
+      if (vE[sy * P]       !== pl) push((sy * N) * 4 + 3);             // left col, W tris
+      if (vE[sy * P + N]   !== pl) push((sy * N + (N - 1)) * 4 + 1);   // right col, E tris
+    }
+
+    while (sp > 0){
+      const c = stack[--sp];
+      const t = c & 3, s = c >> 2;
+      const sx = s % N, sy = (s / N) | 0, b = s * 4;
+
+      // In-square neighbours. Pair (t, t+1) is blocked by dB when t is
+      // even, by dA when t is odd (N-E:dB, E-S:dA, S-W:dB, W-N:dA).
+      const n1 = (t + 1) & 3;
+      if (((t & 1) === 0 ? dB[s] : dA[s]) !== pl) push(b + n1);
+      const n2 = (t + 3) & 3;
+      if (((n2 & 1) === 0 ? dB[s] : dA[s]) !== pl) push(b + n2);
+
+      // Cross-square neighbours through h/v edge slots.
+      if      (t === 0){ if (sy > 0     && hE[sy * P + sx]       !== pl) push(((sy - 1) * N + sx) * 4 + 2); }
+      else if (t === 1){ if (sx < N - 1 && vE[sy * P + sx + 1]   !== pl) push((sy * N + sx + 1) * 4 + 3); }
+      else if (t === 2){ if (sy < N - 1 && hE[(sy + 1) * P + sx] !== pl) push(((sy + 1) * N + sx) * 4 + 0); }
+      else             { if (sx > 0     && vE[sy * P + sx]       !== pl) push((sy * N + sx - 1) * 4 + 1); }
+    }
+  }
+
+  // Claim every cell unreachable from outside that pl doesn't own yet.
+  commitCapture(pl){
+    const { owner, visited, colFlag } = this;
+    const ep = this.epoch, opp = oppOf(pl);
+    let q = 0, colq = 0;
+    for (let c = 0; c < owner.length; c++){
+      if (visited[c] !== ep && owner[c] !== pl){
+        if (owner[c] === opp){
+          colq++; this.scoreQ[opp]--;
+          // opp is losing this cell, so if it was counting toward opp's
+          // *currently held* colonized total, remove that credit — colQ
+          // must track live colonized holdings, not lifetime history,
+          // or bonus moves (movesFor) get awarded for ground already lost.
+          if (colFlag[c]) this.colQ[opp]--;
+          colFlag[c] = 1;
+        }
+        owner[c] = pl; this.scoreQ[pl]++; q++;
+      }
+    }
+    this.colQ[pl] += colq;
+    return { q, colq };
+  }
+
+  // After a capture, delete edges that are strictly INTERIOR to a single
+  // player's territory (both adjacent quarter-cells owned by the same
+  // player). These are exactly the lines the renderer already hides, so
+  // this is visually a no-op — colFlag, ownership and the colonized tint
+  // are all untouched.
+  //
+  // Why it's necessary: flood(pl) treats every one of pl's edges as a
+  // barrier, board-wide and forever. An old loop left buried inside
+  // territory that has since changed hands keeps its interior permanently
+  // unreachable, so commitCapture re-claims it on ANY later move by pl
+  // that triggers a flood — even a move on the far side of the board that
+  // encloses nothing. Clearing buried edges removes that free re-capture
+  // while leaving a genuine new enclosure fully able to take the ground back.
+  clearInteriorEdges(){
+    const { N, P, owner, hE, vE, dA, dB } = this;
+    for (let y = 0; y <= N; y++){
+      for (let x = 0; x < N; x++){
+        const i = y * P + x;
+        if (hE[i]){
+          const above = y > 0 ? owner[((y - 1) * N + x) * 4 + 2] : 0;
+          const below = y < N ? owner[(y * N + x) * 4 + 0]       : 0;
+          if (above > 0 && above === below) hE[i] = 0;
+        }
+      }
+    }
+    for (let y = 0; y < N; y++){
+      for (let x = 0; x <= N; x++){
+        const i = y * P + x;
+        if (vE[i]){
+          const left  = x > 0 ? owner[(y * N + (x - 1)) * 4 + 1] : 0;
+          const right = x < N ? owner[(y * N + x) * 4 + 3]       : 0;
+          if (left > 0 && left === right) vE[i] = 0;
+        }
+      }
+    }
+    for (let s = 0; s < N * N; s++){
+      if (dA[s]){ const a = owner[s * 4 + 0], b = owner[s * 4 + 2]; if (a > 0 && a === b) dA[s] = 0; }
+      if (dB[s]){ const a = owner[s * 4 + 0], b = owner[s * 4 + 1]; if (a > 0 && a === b) dB[s] = 0; }
+    }
+  }
+
+  countCapture(pl){ // simulation: tally only, no mutation
+    const { owner, visited } = this;
+    const ep = this.epoch, opp = oppOf(pl);
+    let q = 0, colq = 0;
+    for (let c = 0; c < owner.length; c++){
+      if (visited[c] !== ep && owner[c] !== pl){ q++; if (owner[c] === opp) colq++; }
+    }
+    return { q, colq };
+  }
+
+  /* ---- the single mutation API (human and AI both use this) ------ */
+  place(x, y, pl){
+    if (!this.canPlace(x, y)) return null;
+    this.dots[this.pi(x, y)] = pl;
+    this.dotList.push({ x, y });
+    const eds = this.newEdges(x, y, pl);
+    this.applyEdges(eds, pl);
+    let cap = { q: 0, colq: 0 };
+    // Any new loop must pass through the new dot, which needs >=2 new
+    // edges — so capture is only possible in that case.
+    if (eds.length >= 2){
+      this.flood(pl);
+      cap = this.commitCapture(pl);
+      if (cap.q > 0) this.clearInteriorEdges();
+    }
+    this.lastPlaced.push({ x, y, pl, time: (typeof performance !== 'undefined' ? performance.now() : 0) });
+    if (this.lastPlaced.length > 12) this.lastPlaced.shift();
+    return { edges: eds.length, gainedQ: cap.q, colQ: cap.colq };
+  }
+
+  simPlace(x, y, pl){ // try a move, measure capture, roll everything back
+    if (!this.canPlace(x, y)) return null;
+    const idx = this.pi(x, y);
+    this.dots[idx] = pl;
+    const eds = this.newEdges(x, y, pl);
+    const res = { q: 0, colq: 0, edges: eds.length };
+    if (eds.length >= 2){
+      this.applyEdges(eds, pl);
+      this.flood(pl);
+      const r = this.countCapture(pl);
+      res.q = r.q; res.colq = r.colq;
+      this.revertEdges(eds);
+    }
+    this.dots[idx] = 0;
+    return res;
+  }
+
+  /* ---- render-side visibility (derived, never stored) ------------ */
+  // 0 = hidden interior line, 1 = territory boundary, 2 = free construction line
+  hEdgeVis(x, y){
+    const N = this.N;
+    const above = (y > 0) ? this.owner[((y - 1) * N + x) * 4 + 2] : 0; // S tri of square above
+    const below = (y < N) ? this.owner[(y * N + x) * 4 + 0]       : 0; // N tri of square below
+    if (above > 0 && below > 0) return 0;
+    return (above > 0 || below > 0) ? 1 : 2;
+  }
+  vEdgeVis(x, y){
+    const N = this.N;
+    const left  = (x > 0) ? this.owner[(y * N + (x - 1)) * 4 + 1] : 0; // E tri of left square
+    const right = (x < N) ? this.owner[(y * N + x) * 4 + 3]       : 0; // W tri of right square
+    if (left > 0 && right > 0) return 0;
+    return (left > 0 || right > 0) ? 1 : 2;
+  }
+  dAVis(s){ // sides {N,E} vs {S,W}; dB can't coexist so N==E and S==W here
+    const a = this.owner[s * 4 + 0], b = this.owner[s * 4 + 2];
+    if (a > 0 && b > 0) return 0;
+    return (a > 0 || b > 0) ? 1 : 2;
+  }
+  dBVis(s){ // sides {N,W} vs {E,S}
+    const a = this.owner[s * 4 + 0], b = this.owner[s * 4 + 1];
+    if (a > 0 && b > 0) return 0;
+    return (a > 0 || b > 0) ? 1 : 2;
+  }
+
+  // Deep, independent copy — used by the hard-difficulty AI to look one move
+  // ahead without touching the real game state. visited/stack are scratch
+  // buffers (re-derived every flood() call) so they're reallocated fresh
+  // rather than copied.
+  clone(){
+    const g = Object.create(Game.prototype);
+    g.N = this.N; g.P = this.P;
+    g.dots = this.dots.slice();
+    g.hE = this.hE.slice();
+    g.vE = this.vE.slice();
+    g.dA = this.dA.slice();
+    g.dB = this.dB.slice();
+    g.owner = this.owner.slice();
+    g.colFlag = this.colFlag.slice();
+    g.visited = new Int32Array(this.visited.length);
+    g.stack = new Int32Array(this.stack.length);
+    g.epoch = 0;
+    g.scoreQ = this.scoreQ.slice();
+    g.colQ = this.colQ.slice();
+    g.dotList = this.dotList.slice();
+    g.lastPlaced = this.lastPlaced.slice();
+    return g;
+  }
+}
+
+/* ---- tiered AI: same rules, same place() API ---------------------
+   easy/medium/hard share one scoring pass; hard adds a genuine one-ply
+   lookahead via Game.clone(), penalizing AI moves that hand the human a
+   big reply. Time-boxed so a cluttered 300-board still stays responsive. */
+const AI_TUNING = {
+  easy:   { rndW: 10, simBudget: N => N <= 160 ? 8  : 5,  blockCap: N => N <= 160 ? 8  : 5,  blockChance: 0.5, lookahead: 0 },
+  medium: { rndW: 3,  simBudget: N => N <= 160 ? 22 : 12, blockCap: N => N <= 160 ? 22 : 12, blockChance: 1.0, lookahead: 0 },
+  hard:   { rndW: 1,  simBudget: N => N <= 160 ? 26 : 14, blockCap: N => N <= 160 ? 26 : 14, blockChance: 1.0, lookahead: 5 }
+};
+
+// Best-value closing move for player pl on board G, capped to a candidate
+// shortlist for speed. Shared by threat-blocking and the hard-mode lookahead.
+function findBestReply(G, pl, cap){
+  const P = G.P;
+  const cand = new Set();
+  for (const d of G.dotList){
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++){
+      const nx = d.x + dx, ny = d.y + dy;
+      if (nx < 0 || ny < 0 || nx >= P || ny >= P) continue;
+      const k = ny * P + nx;
+      if (G.dots[k] === 0) cand.add(k);
+    }
+  }
+  let list = [];
+  for (const k of cand){
+    const x = k % P, y = (k / P) | 0;
+    if (!G.canPlace(x, y)) continue;
+    const eds = G.newEdges(x, y, pl).length;
+    if (eds >= 2) list.push({ x, y, k, eds });
+  }
+  list.sort((a, b) => b.eds - a.eds);
+  list = list.slice(0, cap);
+  let best = null, bestV = 0;
+  for (const t of list){
+    const r = G.simPlace(t.x, t.y, pl);
+    if (r){
+      const v = r.q * 25 + r.colq * 45;
+      if (v > bestV){ bestV = v; best = { x: t.x, y: t.y, k: t.k, value: v }; }
+    }
+  }
+  return best;
+}
+
+function chooseAIMove(G, rnd, difficulty){
+  rnd = rnd || Math.random;
+  const tune = AI_TUNING[difficulty] || AI_TUNING.medium;
+  const P = G.P, N = G.N;
+
+  // Candidates: empty, legal points within Chebyshev 2 of any dot.
+  const cand = new Set();
+  for (const d of G.dotList){
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++){
+      const nx = d.x + dx, ny = d.y + dy;
+      if (nx < 0 || ny < 0 || nx >= P || ny >= P) continue;
+      const k = ny * P + nx;
+      if (G.dots[k] === 0) cand.add(k);
+    }
+  }
+
+  const list = [];
+  for (const k of cand){
+    const x = k % P, y = (k / P) | 0;
+    if (!G.canPlace(x, y)) continue;
+    const eds = G.newEdges(x, y, AIP);
+    let diag = 0; for (const e of eds) if (e.t >= 2) diag++;
+    let ownAdj = 0, oppAdj = 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++){
+      if (!dx && !dy) continue;
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= P || ny >= P) continue;
+      const v = G.dots[ny * P + nx];
+      if (v === AIP) ownAdj++; else if (v === HUMAN) oppAdj++;
+    }
+    const s = eds.length * 5 + diag * 1.4 + ownAdj * 1.1 + oppAdj * 0.8 + rnd() * tune.rndW;
+    list.push({ x, y, k, edges: eds.length, s });
+  }
+  if (!list.length) return null;
+
+  list.sort((a, b) => b.s - a.s);
+
+  // Deep-evaluate real capture potential for closable candidates.
+  const simBudget = tune.simBudget(N);
+  const deep = list.filter(o => o.edges >= 2).slice(0, simBudget);
+  for (const o of deep){
+    const r = G.simPlace(o.x, o.y, AIP);
+    if (r) o.s += r.q * 25 + r.colq * 45; // area*100, colonized extra
+  }
+
+  // Block the human's best immediate capture by taking that point.
+  // Easy sometimes skips this on purpose so it stays beatable.
+  if (rnd() < tune.blockChance){
+    const bestT = findBestReply(G, HUMAN, tune.blockCap(N));
+    if (bestT){
+      let f = list.find(o => o.k === bestT.k);
+      if (!f){ f = { x: bestT.x, y: bestT.y, k: bestT.k, edges: 0, s: 0 }; list.push(f); }
+      f.s += bestT.value * 0.95;
+    }
+  }
+
+  list.sort((a, b) => b.s - a.s);
+
+  // Hard only: for the top few candidates, actually play them out on a
+  // clone and see how big a reply the human would get — then discount
+  // moves that hand back a big capture. Time-boxed to stay responsive.
+  if (tune.lookahead > 0){
+    const started = performance.now();
+    const timeBudgetMs = 380;
+    const shortlist = list.slice(0, tune.lookahead);
+    for (const o of shortlist){
+      if (performance.now() - started > timeBudgetMs) break;
+      const G2 = G.clone();
+      G2.place(o.x, o.y, AIP);
+      const reply = findBestReply(G2, HUMAN, Math.min(10, tune.blockCap(N)));
+      if (reply) o.s -= reply.value * 0.9;
+    }
+    list.sort((a, b) => b.s - a.s);
+  }
+
+  return list[0];
+}
+
+if (typeof globalThis !== 'undefined'){
+  globalThis.Game = Game;
+  globalThis.chooseAIMove = chooseAIMove;
+  globalThis.oppOf = oppOf;
+}
+/*==ENDLOGIC==*/
+
+/* ================================================================
+   UI / RENDERER — draws only from state, never mutates game logic.
+   ================================================================ */
+(function(){
+'use strict';
+
+const cv   = document.getElementById('board');
+const ctx  = cv.getContext('2d');
+const mini = document.getElementById('mini');
+const mctx = mini.getContext('2d');
+
+const COL = { 1: '#233bd1', 2: '#c31f3f' };
+const COL_RGB = { 1: '35,59,209', 2: '195,31,63' };
+const FILL = {
+  '1_0': 'rgba(35,59,209,0.16)',  '1_1': 'rgba(96,40,182,0.22)',
+  '2_0': 'rgba(195,31,63,0.16)',  '2_1': 'rgba(178,34,120,0.22)'
+};
+const PAPER = '#f7f4ea', DESK = '#e6e1d2';
+const GRID_MINOR = 'rgba(96,120,178,0.16)', GRID_MAJOR = 'rgba(96,120,178,0.30)';
+
+const CELL = 26;                    // world px per grid cell at zoom 1
+let game = new Game(150);
+let camX = 0, camY = 0, zoom = 1;
+let W = 0, H = 0, dpr = 1;
+let dirty = true, minimapDirty = true;
+let hover = null;                   // {x,y,valid}
+let locked = false;                 // input off during AI turn
+let mode = 'ai';                    // 'ai' | 'pvp' (local pass-and-play)
+let aiDifficulty = 'medium';        // 'easy' | 'medium' | 'hard'
+let currentPlayer = HUMAN;          // whose turn it is, either mode
+let movesLeft = 1, aiTotal = 1, aiMade = 0;
+let session = 0;                    // invalidates pending AI timeouts on reset
+let moveCounter = 0;                // total placements this game, for the capture log
+let captureLog = [];                // {move,pl,gainedQ,colQ,totalYou,totalRed} — capture events only, most recent first
+let floaters = [];                  // {wx,wy,text,color,born}
+let captureAnims = [];              // {cellSet,seedWX,seedWY,maxDist,born,duration,pl,areaQ}
+let particles = [];                 // {wx,wy,vx,vy,born,life,color,size}
+let camTween = null;                // {x,y,from:{x,y},t0}
+let mm = document.createElement('canvas'); // minimap offscreen, 1px per square
+
+const sBlue = document.getElementById('sBlue'), sRed = document.getElementById('sRed');
+const mBlue = document.getElementById('mBlue'), mRed = document.getElementById('mRed');
+const whoBlue = document.getElementById('whoBlue'), whoRed = document.getElementById('whoRed');
+const pill  = document.getElementById('turnPill');
+const muteBtn = document.getElementById('muteBtn');
+const logBtn = document.getElementById('logBtn');
+const logPanel = document.getElementById('logPanel');
+const logList = document.getElementById('logList');
+
+/* ---------------- sound (synthesized, no audio files) -------------- */
+let muted = false;
+let actx = null;
+function ac(){
+  if (!actx){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    try { actx = new AC(); } catch (e) { return null; }
+  }
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function tone(freq, dur, opts){
+  if (muted) return;
+  const c = ac(); if (!c) return;
+  opts = opts || {};
+  const t0 = c.currentTime + (opts.delay || 0);
+  const osc = c.createOscillator(), g = c.createGain();
+  osc.type = opts.type || 'sine';
+  osc.frequency.setValueAtTime(freq, t0);
+  if (opts.glide) osc.frequency.exponentialRampToValueAtTime(opts.glide, t0 + dur * 0.85);
+  const peak = opts.gain != null ? opts.gain : 0.15;
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(peak, t0 + Math.min(0.02, dur * 0.3));
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(g); g.connect(c.destination);
+  osc.start(t0); osc.stop(t0 + dur + 0.03);
+}
+function sfxPlace(pl){ tone(pl === HUMAN ? 740 : 600, 0.05, { type: 'sine', gain: 0.09 }); }
+function sfxCapture(gainedQ, colonized){
+  const area = gainedQ / 4;
+  const notes = area >= 6 ? 3 : area >= 1.5 ? 2 : 1;
+  const base = colonized ? 320 : 460;
+  for (let i = 0; i < notes; i++){
+    const f = base * Math.pow(1.5, i);
+    tone(f, 0.15 + i * 0.02, { type: colonized ? 'sawtooth' : 'triangle', gain: 0.12 - i * 0.02, delay: i * 0.07, glide: f * 1.35 });
+  }
+}
+
+const fmt = v => (v % 1 === 0 ? v.toFixed(0) : v.toFixed(1));
+const boardSize = () => game.N * CELL;
+const w2sX = wx => (wx - camX) * zoom + W / 2;
+const w2sY = wy => (wy - camY) * zoom + H / 2;
+const s2wX = sx => (sx - W / 2) / zoom + camX;
+const s2wY = sy => (sy - H / 2) / zoom + camY;
+const minZoom = () => Math.min(0.9, (Math.min(W, H) * 0.94) / boardSize());
+const clampZoom = z => Math.max(minZoom(), Math.min(4, z));
+function clampCam(){
+  const bs = boardSize();
+  camX = Math.max(0, Math.min(bs, camX));
+  camY = Math.max(0, Math.min(bs, camY));
+}
+
+/* ---------------- HUD ---------------- */
+function updateHUD(){
+  sBlue.textContent = fmt(game.area(HUMAN));
+  sRed.textContent  = fmt(game.area(AIP));
+  mBlue.textContent = `colonized ${fmt(game.colArea(HUMAN))} \u00b7 ${game.movesFor(HUMAN)} move${game.movesFor(HUMAN) > 1 ? 's' : ''}/turn`;
+  mRed.textContent  = `colonized ${fmt(game.colArea(AIP))} \u00b7 ${game.movesFor(AIP)} move${game.movesFor(AIP) > 1 ? 's' : ''}/turn`;
+}
+function setPill(text, ai){
+  pill.textContent = text;
+  pill.classList.toggle('ai', !!ai);
+}
+function updateWhoLabels(){
+  whoBlue.textContent = mode === 'pvp' ? 'Player 1' : 'You';
+  whoRed.textContent  = mode === 'pvp' ? 'Player 2' : 'Red\u00A0(AI)';
+}
+
+/* ---------------- capture juice: ink-bleed anim + particles -------- */
+function registerCaptureAnim(before, after, x, y, pl, r){
+  const N = game.N;
+  const cells = [];
+  const seedWX = x * CELL, seedWY = y * CELL;
+  let maxDist = 0;
+  for (let c = 0; c < after.length; c++){
+    if (after[c] !== before[c] && after[c] === pl){
+      const s = c >> 2, csx = s % N, csy = (s / N) | 0;
+      const d = Math.hypot((csx + 0.5) * CELL - seedWX, (csy + 0.5) * CELL - seedWY);
+      if (d > maxDist) maxDist = d;
+      cells.push(c);
+    }
+  }
+  if (!cells.length) return;
+  const duration = Math.max(220, Math.min(900, 220 + r.gainedQ * 14));
+  captureAnims.push({ cellSet: new Set(cells), seedWX, seedWY, maxDist: maxDist || CELL, born: performance.now(), duration, pl, areaQ: r.gainedQ });
+  spawnParticles(seedWX, seedWY, pl, r.gainedQ);
+}
+
+function spawnParticles(wx, wy, pl, gainedQ){
+  const area = gainedQ / 4;
+  if (area < 1) return; // keep tiny closes clean — juice scales with capture size
+  const n = Math.max(4, Math.min(22, Math.round(4 + area * 1.6)));
+  for (let i = 0; i < n; i++){
+    const ang = Math.random() * Math.PI * 2;
+    const speed = 40 + Math.random() * 90;
+    particles.push({
+      wx, wy, vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed - 30,
+      born: performance.now(), life: 500 + Math.random() * 350,
+      color: COL[pl], size: 1.4 + Math.random() * 1.8
+    });
+  }
+}
+
+/* ---------------- turn flow (vs AI or local 2-player) -------------- */
+function startTurn(pl){
+  currentPlayer = pl;
+  movesLeft = game.movesFor(pl);
+  updateHUD();
+  if (mode === 'ai' && pl === AIP){
+    locked = true;
+    aiTotal = movesLeft; aiMade = 0;
+    setPill(aiTotal > 1 ? `Red is thinking\u2026 (1/${aiTotal})` : 'Red is thinking\u2026', true);
+    aiTurn();
+  } else {
+    locked = false;
+    const label = mode === 'pvp' ? (pl === HUMAN ? 'Player 1' : 'Player 2') + '\u2019s turn' : 'Your turn';
+    setPill(movesLeft > 1 ? `${label} \u2014 ${movesLeft} moves` : `${label} \u2014 place a dot`, false);
+  }
+  dirty = true;
+}
+
+function afterPlace(x, y, pl, r, before){
+  moveCounter++;
+  sfxPlace(pl);
+  if (r && r.gainedQ > 0){
+    const wx = x * CELL, wy = y * CELL;
+    floaters.push({ wx, wy, text: `+${fmt(r.gainedQ / 4)}`, color: COL[pl], born: performance.now() });
+    if (r.colQ > 0)
+      floaters.push({ wx, wy: wy + 18, text: `\u2691 ${fmt(r.colQ / 4)} colonized`, color: COL[pl], born: performance.now() + 120 });
+    if (before) registerCaptureAnim(before, game.owner, x, y, pl, r);
+    sfxCapture(r.gainedQ, r.colQ > 0);
+    // capture log: records only real capture events, oldest→newest push order
+    // reversed at render time, so the log is a plain, honest move history —
+    // this is what settles "who actually took this cell, and when" instead
+    // of inferring it from a single screenshot of current state.
+    captureLog.push({
+      move: moveCounter, pl, gainedQ: r.gainedQ, colQ: r.colQ,
+      totalYou: game.area(HUMAN), totalRed: game.area(AIP)
+    });
+    if (captureLog.length > 60) captureLog.shift();
+    renderLog();
+  }
+  minimapDirty = true; dirty = true; updateHUD();
+}
+
+function renderLog(){
+  if (!captureLog.length){ logList.innerHTML = '<div class="detail">No captures yet.</div>'; return; }
+  let html = '';
+  for (let i = captureLog.length - 1; i >= 0; i--){
+    const e = captureLog[i];
+    const who = e.pl === HUMAN ? 'You' : 'Red';
+    const opp = e.pl === HUMAN ? 'Red' : 'You';
+    const colTxt = e.colQ > 0 ? `${fmt(e.colQ / 4)} colonized from ${opp}` : 'no colonization';
+    html += `<div class="logEntry">`
+      + `<div class="who" style="color:${COL[e.pl]}">#${e.move} ${who} +${fmt(e.gainedQ / 4)}</div>`
+      + `<div class="detail">${colTxt} \u00b7 totals ${fmt(e.totalYou)} / ${fmt(e.totalRed)}</div>`
+      + `</div>`;
+  }
+  logList.innerHTML = html;
+}
+
+function onBoardClick(gx, gy){
+  if (locked || !game.canPlace(gx, gy)) return;
+  const before = game.owner.slice();
+  const pl = currentPlayer;
+  const r = game.place(gx, gy, pl);
+  afterPlace(gx, gy, pl, r, before);
+  movesLeft--;
+  if (movesLeft > 0){
+    const label = mode === 'pvp' ? (pl === HUMAN ? 'Player 1' : 'Player 2') + '\u2019s turn' : 'Your turn';
+    setPill(`${label} \u2014 ${movesLeft} move${movesLeft > 1 ? 's' : ''} left`, false);
+  } else {
+    startTurn(oppOf(pl));
+  }
+}
+
+function aiTurn(){
+  const sess = session;
+  const step = () => {
+    if (sess !== session) return;
+    const mv = chooseAIMove(game, Math.random, aiDifficulty);
+    if (mv){
+      const before = game.owner.slice();
+      const r = game.place(mv.x, mv.y, AIP);
+      afterPlace(mv.x, mv.y, AIP, r, before);
+      panToIfOffscreen(mv.x, mv.y);
+    }
+    aiMade++;
+    if (mv && aiMade < aiTotal){
+      setPill(`Red is thinking\u2026 (${aiMade + 1}/${aiTotal})`, true);
+      setTimeout(step, 430);
+    } else {
+      startTurn(HUMAN);
+    }
+  };
+  setTimeout(step, 420);
+}
+
+function panToIfOffscreen(gx, gy){
+  const sx = w2sX(gx * CELL), sy = w2sY(gy * CELL), m = 60;
+  if (sx < m || sy < m || sx > W - m || sy > H - m){
+    camTween = { x: gx * CELL, y: gy * CELL, from: { x: camX, y: camY }, t0: performance.now() };
+  }
+}
+
+function newGame(){
+  session++;
+  game = new Game(parseInt(document.getElementById('sizeSel').value, 10));
+  const bs = boardSize();
+  camX = bs / 2; camY = bs / 2; zoom = 1; camTween = null;
+  floaters = []; captureAnims = []; particles = []; hover = null;
+  moveCounter = 0; captureLog = []; renderLog();
+  mm.width = game.N; mm.height = game.N;
+  minimapDirty = true; dirty = true;
+  startTurn(HUMAN);
+}
+
+/* ---------------- main canvas rendering ---------------- */
+function resize(){
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  dirty = true;
+}
+
+function render(){
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = DESK;
+  ctx.fillRect(0, 0, W, H);
+
+  const G = game, N = G.N, P = G.P;
+  const now = performance.now();
+  const bs = boardSize();
+  const px0 = w2sX(0), py0 = w2sY(0), pw = bs * zoom;
+
+  // capture-reveal wavefronts (ink-bleed): cells still mid-animation get
+  // pulled out of the batched fill pass below and drawn individually with
+  // a per-triangle reveal alpha instead.
+  let hot = null;
+  if (captureAnims.length){
+    hot = new Map();
+    for (let i = captureAnims.length - 1; i >= 0; i--){
+      const a = captureAnims[i];
+      const t = now - a.born;
+      if (t >= a.duration){ captureAnims.splice(i, 1); continue; }
+      const wave = (t / a.duration) * (a.maxDist + CELL * 1.4);
+      for (const c of a.cellSet){
+        const s = c >> 2, csx = s % N, csy = (s / N) | 0;
+        const d = Math.hypot((csx + 0.5) * CELL - a.seedWX, (csy + 0.5) * CELL - a.seedWY);
+        const frac = Math.max(0, Math.min(1, (wave - d) / (CELL * 1.3)));
+        const prev = hot.get(c);
+        if (prev === undefined || frac > prev) hot.set(c, frac);
+      }
+    }
+    if (!hot.size) hot = null;
+  }
+
+  // paper sheet
+  ctx.save();
+  ctx.shadowColor = 'rgba(32,38,58,.20)';
+  ctx.shadowBlur = 26; ctx.shadowOffsetY = 7;
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(px0, py0, pw, pw);
+  ctx.restore();
+
+  // visible grid range
+  const gx0 = Math.max(0, Math.floor(s2wX(0) / CELL));
+  const gx1 = Math.min(N, Math.ceil(s2wX(W) / CELL));
+  const gy0 = Math.max(0, Math.floor(s2wY(0) / CELL));
+  const gy1 = Math.min(N, Math.ceil(s2wY(H) / CELL));
+  const cz = CELL * zoom;
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(px0, py0, pw, pw); ctx.clip();
+
+  // 1) grid — minor lines fade out when cells get tiny
+  const showMinor = cz >= 7;
+  ctx.lineWidth = 1;
+  if (showMinor){
+    ctx.strokeStyle = GRID_MINOR; ctx.beginPath();
+    for (let x = gx0; x <= gx1; x++){ if (x % 10 === 0) continue; const sx = w2sX(x * CELL); ctx.moveTo(sx, py0); ctx.lineTo(sx, py0 + pw); }
+    for (let y = gy0; y <= gy1; y++){ if (y % 10 === 0) continue; const sy = w2sY(y * CELL); ctx.moveTo(px0, sy); ctx.lineTo(px0 + pw, sy); }
+    ctx.stroke();
+  }
+  ctx.strokeStyle = GRID_MAJOR; ctx.beginPath();
+  for (let x = Math.ceil(gx0 / 10) * 10; x <= gx1; x += 10){ const sx = w2sX(x * CELL); ctx.moveTo(sx, py0); ctx.lineTo(sx, py0 + pw); }
+  for (let y = Math.ceil(gy0 / 10) * 10; y <= gy1; y += 10){ const sy = w2sY(y * CELL); ctx.moveTo(px0, sy); ctx.lineTo(px0 + pw, sy); }
+  ctx.stroke();
+
+  // 2) territory fills — settled cells batch into one pass as before; a
+  // cell still inside its ink-bleed window is drawn individually at its
+  // current reveal alpha instead of joining the batch.
+  const fillPaths = { '1_0': null, '1_1': null, '2_0': null, '2_1': null };
+  const getFP = k => fillPaths[k] || (fillPaths[k] = new Path2D());
+  const fillTri = (o, f, x1, y1, x2, y2, x3, y3, a) => {
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.lineTo(x3, y3); ctx.closePath();
+    ctx.globalAlpha = a; ctx.fillStyle = FILL[o + '_' + f]; ctx.fill();
+  };
+  const ow = G.owner, cf = G.colFlag;
+  for (let sy = gy0; sy < gy1; sy++){
+    const rowB = sy * N;
+    for (let sx = gx0; sx < gx1; sx++){
+      const b = (rowB + sx) * 4;
+      const o0 = ow[b], o1 = ow[b + 1], o2 = ow[b + 2], o3 = ow[b + 3];
+      if (!(o0 | o1 | o2 | o3)) continue;
+      const anyHot = hot && (hot.has(b) || hot.has(b + 1) || hot.has(b + 2) || hot.has(b + 3));
+      const X = w2sX(sx * CELL), Y = w2sY(sy * CELL);
+      const f0 = cf[b], f1 = cf[b + 1], f2 = cf[b + 2], f3 = cf[b + 3];
+      if (!anyHot && o0 && o0 === o1 && o1 === o2 && o2 === o3 && f0 === f1 && f1 === f2 && f2 === f3){
+        getFP(o0 + '_' + f0).rect(X, Y, cz, cz);
+        continue;
+      }
+      const mx = X + cz / 2, my = Y + cz / 2;
+      if (o0){ const rv = hot && hot.get(b); if (rv != null) fillTri(o0, f0, X, Y, X + cz, Y, mx, my, rv); else { const p = getFP(o0 + '_' + f0); p.moveTo(X, Y);           p.lineTo(X + cz, Y);      p.lineTo(mx, my); p.closePath(); } }
+      if (o1){ const rv = hot && hot.get(b + 1); if (rv != null) fillTri(o1, f1, X + cz, Y, X + cz, Y + cz, mx, my, rv); else { const p = getFP(o1 + '_' + f1); p.moveTo(X + cz, Y);      p.lineTo(X + cz, Y + cz); p.lineTo(mx, my); p.closePath(); } }
+      if (o2){ const rv = hot && hot.get(b + 2); if (rv != null) fillTri(o2, f2, X + cz, Y + cz, X, Y + cz, mx, my, rv); else { const p = getFP(o2 + '_' + f2); p.moveTo(X + cz, Y + cz); p.lineTo(X, Y + cz);      p.lineTo(mx, my); p.closePath(); } }
+      if (o3){ const rv = hot && hot.get(b + 3); if (rv != null) fillTri(o3, f3, X, Y + cz, X, Y, mx, my, rv); else { const p = getFP(o3 + '_' + f3); p.moveTo(X, Y + cz);      p.lineTo(X, Y);           p.lineTo(mx, my); p.closePath(); } }
+    }
+  }
+  ctx.globalAlpha = 1;
+  for (const k in fillPaths) if (fillPaths[k]){ ctx.fillStyle = FILL[k]; ctx.fill(fillPaths[k]); }
+
+  // 3) lines — construction (thin) below, territory boundaries (bold) above
+  const consP = { 1: null, 2: null }, bndP = { 1: null, 2: null };
+  const seg = (grp, o, x1, y1, x2, y2) => {
+    const p = grp[o] || (grp[o] = new Path2D());
+    p.moveTo(w2sX(x1 * CELL), w2sY(y1 * CELL));
+    p.lineTo(w2sX(x2 * CELL), w2sY(y2 * CELL));
+  };
+  const { hE, vE, dA, dB } = G;
+  for (let y = gy0; y <= gy1; y++){
+    for (let x = gx0; x < gx1; x++){
+      const o = hE[y * P + x];
+      if (!o) continue;
+      const v = G.hEdgeVis(x, y);
+      if (v === 0) continue;
+      seg(v === 1 ? bndP : consP, o, x, y, x + 1, y);
+    }
+  }
+  for (let y = gy0; y < gy1; y++){
+    for (let x = gx0; x <= gx1; x++){
+      const o = vE[y * P + x];
+      if (!o) continue;
+      const v = G.vEdgeVis(x, y);
+      if (v === 0) continue;
+      seg(v === 1 ? bndP : consP, o, x, y, x, y + 1);
+    }
+  }
+  for (let sy = gy0; sy < gy1; sy++){
+    for (let sx = gx0; sx < gx1; sx++){
+      const s = sy * N + sx;
+      let o = dA[s];
+      if (o){ const v = G.dAVis(s); if (v) seg(v === 1 ? bndP : consP, o, sx, sy, sx + 1, sy + 1); }
+      o = dB[s];
+      if (o){ const v = G.dBVis(s); if (v) seg(v === 1 ? bndP : consP, o, sx + 1, sy, sx, sy + 1); }
+    }
+  }
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.lineWidth = Math.max(1, Math.min(2.4, 1.5 * zoom));
+  ctx.globalAlpha = 0.85;
+  for (const k in consP) if (consP[k]){ ctx.strokeStyle = COL[k]; ctx.stroke(consP[k]); }
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = Math.max(1.6, Math.min(4.2, 2.7 * zoom));
+  for (const k in bndP) if (bndP[k]){ ctx.strokeStyle = COL[k]; ctx.stroke(bndP[k]); }
+
+  // 4) dots — only those not on / inside claimed territory
+  const dotR = Math.max(2, Math.min(6, 0.165 * cz));
+  const dotP = { 1: null, 2: null };
+  for (let y = gy0; y <= gy1; y++){
+    for (let x = gx0; x <= gx1; x++){
+      const d = G.dots[y * P + x];
+      if (!d || G.pointTouchesTerritory(x, y)) continue;
+      const p = dotP[d] || (dotP[d] = new Path2D());
+      p.moveTo(w2sX(x * CELL) + dotR, w2sY(y * CELL));
+      p.arc(w2sX(x * CELL), w2sY(y * CELL), dotR, 0, Math.PI * 2);
+    }
+  }
+  for (const k in dotP) if (dotP[k]){ ctx.fillStyle = COL[k]; ctx.fill(dotP[k]); }
+
+  // last-move pulse rings
+  let anim = false;
+  for (const m of G.lastPlaced){
+    const age = now - m.time;
+    if (age > 2100) continue;
+    anim = true;
+    const a = 1 - age / 2100;
+    ctx.beginPath();
+    ctx.arc(w2sX(m.x * CELL), w2sY(m.y * CELL), dotR + 3 + (1 - a) * 9, 0, Math.PI * 2);
+    ctx.strokeStyle = COL[m.pl]; ctx.globalAlpha = a * 0.65; ctx.lineWidth = 2;
+    ctx.stroke(); ctx.globalAlpha = 1;
+  }
+
+  // capture blooms — soft ink flash tracking the reveal wavefront
+  for (const a of captureAnims){
+    const t = now - a.born;
+    const p = Math.min(1, t / a.duration);
+    const rad = (10 + p * (a.maxDist + CELL * 1.6)) * zoom;
+    const alpha = (1 - p) * 0.28 * Math.min(1, 0.45 + a.areaQ / 16);
+    if (alpha <= 0.012) continue;
+    anim = true;
+    const sx = w2sX(a.seedWX), sy = w2sY(a.seedWY);
+    const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, Math.max(4, rad));
+    grad.addColorStop(0, `rgba(${COL_RGB[a.pl]},${alpha})`);
+    grad.addColorStop(1, `rgba(${COL_RGB[a.pl]},0)`);
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(sx, sy, Math.max(4, rad), 0, Math.PI * 2); ctx.fill();
+  }
+
+  // ink-fleck particles from bigger captures
+  if (particles.length){
+    for (let i = particles.length - 1; i >= 0; i--){
+      const pt = particles[i];
+      const age = now - pt.born;
+      if (age > pt.life){ particles.splice(i, 1); continue; }
+      anim = true;
+      const t = age / 1000;
+      const life = age / pt.life;
+      const ppx = w2sX(pt.wx + pt.vx * t);
+      const ppy = w2sY(pt.wy + pt.vy * t + 160 * t * t);
+      ctx.globalAlpha = Math.max(0, 1 - life);
+      ctx.fillStyle = pt.color;
+      ctx.beginPath(); ctx.arc(ppx, ppy, pt.size * zoom, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // hover ghost — dot plus the exact lines it would create
+  if (hover && !locked){
+    const hx = w2sX(hover.x * CELL), hy = w2sY(hover.y * CELL);
+    if (hover.valid){
+      const eds = G.newEdges(hover.x, hover.y, HUMAN);
+      ctx.save();
+      ctx.setLineDash([4, 4]); ctx.lineWidth = 1.6;
+      ctx.strokeStyle = COL[HUMAN]; ctx.globalAlpha = 0.5;
+      ctx.beginPath();
+      for (const e of eds){
+        let x1, y1, x2, y2;
+        if (e.t === 0){ x1 = e.i % P; y1 = (e.i / P) | 0; x2 = x1 + 1; y2 = y1; }
+        else if (e.t === 1){ x1 = e.i % P; y1 = (e.i / P) | 0; x2 = x1; y2 = y1 + 1; }
+        else if (e.t === 2){ x1 = e.i % N; y1 = (e.i / N) | 0; x2 = x1 + 1; y2 = y1 + 1; }
+        else { const sx = e.i % N, sy2 = (e.i / N) | 0; x1 = sx + 1; y1 = sy2; x2 = sx; y2 = sy2 + 1; }
+        ctx.moveTo(w2sX(x1 * CELL), w2sY(y1 * CELL));
+        ctx.lineTo(w2sX(x2 * CELL), w2sY(y2 * CELL));
+      }
+      ctx.stroke(); ctx.restore();
+      ctx.beginPath(); ctx.arc(hx, hy, dotR, 0, Math.PI * 2);
+      ctx.fillStyle = COL[HUMAN]; ctx.globalAlpha = 0.45; ctx.fill(); ctx.globalAlpha = 1;
+    } else {
+      ctx.strokeStyle = 'rgba(32,38,58,.45)'; ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(hx - 4, hy - 4); ctx.lineTo(hx + 4, hy + 4);
+      ctx.moveTo(hx + 4, hy - 4); ctx.lineTo(hx - 4, hy + 4);
+      ctx.stroke();
+    }
+  }
+
+  // capture floaters
+  floaters = floaters.filter(f => now - f.born < 1500);
+  for (const f of floaters){
+    const t = Math.max(0, (now - f.born) / 1500);
+    anim = true;
+    ctx.font = '700 13px "Inter","Avenir Next","Segoe UI",sans-serif';
+    ctx.textAlign = 'center';
+    ctx.globalAlpha = 1 - t;
+    ctx.fillStyle = f.color;
+    ctx.fillText(f.text, w2sX(f.wx), w2sY(f.wy) - 14 - t * 26);
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
+  return anim || floaters.length > 0 || particles.length > 0 || captureAnims.length > 0;
+}
+
+/* ---------------- minimap ---------------- */
+function updateMinimapBitmap(){
+  const N = game.N;
+  const img = mctx.createImageData ? new ImageData(N, N) : null;
+  const d = img.data;
+  const base = [247, 244, 234];
+  const put = (i, r, g, b) => { d[i] = r; d[i + 1] = g; d[i + 2] = b; d[i + 3] = 255; };
+  const ow = game.owner;
+  for (let s = 0; s < N * N; s++){
+    const b4 = s * 4;
+    const o = ow[b4] || ow[b4 + 1] || ow[b4 + 2] || ow[b4 + 3];
+    const i = s * 4;
+    if (o === 1) put(i, 158, 165, 233);
+    else if (o === 2) put(i, 240, 158, 176);
+    else put(i, base[0], base[1], base[2]);
+  }
+  // dots as darker pixels where the square is unclaimed
+  const P = game.P;
+  for (const dt of game.dotList){
+    const sx = Math.min(dt.x, N - 1), sy = Math.min(dt.y, N - 1);
+    const s = sy * N + sx, i = s * 4;
+    if (d[i + 3] === 255 && d[i] === base[0] && d[i + 1] === base[1] && d[i + 2] === base[2]){
+      const v = game.dots[dt.y * P + dt.x];
+      if (v === 1) put(i, 94, 108, 231); else put(i, 231, 94, 128);
+    }
+  }
+  mm.getContext('2d').putImageData(img, 0, 0);
+}
+
+function renderMini(){
+  const size = mini.clientWidth || 156;
+  const mdpr = Math.min(2, window.devicePixelRatio || 1);
+  if (mini.width !== size * mdpr){ mini.width = size * mdpr; mini.height = size * mdpr; }
+  mctx.setTransform(mdpr, 0, 0, mdpr, 0, 0);
+  mctx.imageSmoothingEnabled = false;
+  mctx.fillStyle = PAPER;
+  mctx.fillRect(0, 0, size, size);
+  mctx.drawImage(mm, 0, 0, size, size);
+  mctx.strokeStyle = 'rgba(32,38,58,.35)';
+  mctx.lineWidth = 1;
+  mctx.strokeRect(0.5, 0.5, size - 1, size - 1);
+  // camera rectangle
+  const bs = boardSize(), k = size / bs;
+  const vx = (camX - W / (2 * zoom)) * k, vy = (camY - H / (2 * zoom)) * k;
+  const vw = (W / zoom) * k, vh = (H / zoom) * k;
+  mctx.strokeStyle = '#20263a';
+  mctx.lineWidth = 1.4;
+  mctx.strokeRect(Math.max(0.7, vx), Math.max(0.7, vy),
+                  Math.min(size - 1.4, vw), Math.min(size - 1.4, vh));
+}
+
+/* ---------------- input ---------------- */
+const pointers = new Map();
+let panActive = false, movedDist = 0, pinch0 = null, suppressTap = false;
+
+cv.addEventListener('contextmenu', e => e.preventDefault());
+
+cv.addEventListener('pointerdown', e => {
+  ac(); // first gesture unlocks audio
+  cv.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 1){ movedDist = 0; panActive = false; suppressTap = false; }
+  if (pointers.size === 2){
+    const [a, b] = [...pointers.values()];
+    pinch0 = {
+      d: Math.hypot(a.x - b.x, a.y - b.y), zoom,
+      wx: s2wX((a.x + b.x) / 2), wy: s2wY((a.y + b.y) / 2)
+    };
+    suppressTap = true;
+  }
+});
+
+cv.addEventListener('pointermove', e => {
+  const prev = pointers.get(e.pointerId);
+  if (prev){
+    if (pointers.size === 2 && pinch0){
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const [a, b] = [...pointers.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      zoom = clampZoom(pinch0.zoom * d / Math.max(20, pinch0.d));
+      const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+      camX = pinch0.wx - (cx - W / 2) / zoom;
+      camY = pinch0.wy - (cy - H / 2) / zoom;
+      clampCam(); dirty = true;
+      return;
+    }
+    const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+    movedDist += Math.abs(dx) + Math.abs(dy);
+    if (movedDist > 7) panActive = true;
+    if (panActive){
+      camX -= dx / zoom; camY -= dy / zoom;
+      clampCam(); camTween = null; dirty = true;
+    }
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  }
+  // hover ghost (mouse only)
+  if (e.pointerType === 'mouse' && pointers.size <= 1){
+    const gx = Math.round(s2wX(e.clientX) / CELL);
+    const gy = Math.round(s2wY(e.clientY) / CELL);
+    const valid = game.canPlace(gx, gy);
+    if (!hover || hover.x !== gx || hover.y !== gy || hover.valid !== valid){
+      hover = { x: gx, y: gy, valid };
+      dirty = true;
+    }
+  }
+});
+
+function endPointer(e){
+  const wasPan = panActive, wasPinch = suppressTap;
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinch0 = null;
+  if (pointers.size === 0){
+    if (!wasPan && !wasPinch && e.type === 'pointerup'){
+      const gx = Math.round(s2wX(e.clientX) / CELL);
+      const gy = Math.round(s2wY(e.clientY) / CELL);
+      onBoardClick(gx, gy);
+    }
+    panActive = false; suppressTap = false;
+  }
+}
+cv.addEventListener('pointerup', endPointer);
+cv.addEventListener('pointercancel', endPointer);
+cv.addEventListener('pointerleave', () => { if (hover){ hover = null; dirty = true; } });
+
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const wx = s2wX(e.clientX), wy = s2wY(e.clientY);
+  zoom = clampZoom(zoom * Math.exp(-e.deltaY * 0.0012));
+  camX = wx - (e.clientX - W / 2) / zoom;
+  camY = wy - (e.clientY - H / 2) / zoom;
+  clampCam(); camTween = null; dirty = true;
+}, { passive: false });
+
+window.addEventListener('keydown', e => {
+  const step = 90 / zoom;
+  let used = true;
+  if (e.key === 'ArrowLeft' || e.key === 'a') camX -= step;
+  else if (e.key === 'ArrowRight' || e.key === 'd') camX += step;
+  else if (e.key === 'ArrowUp' || e.key === 'w') camY -= step;
+  else if (e.key === 'ArrowDown' || e.key === 's') camY += step;
+  else used = false;
+  if (used){ clampCam(); camTween = null; dirty = true; e.preventDefault(); }
+});
+
+/* minimap: click / drag to jump — its own element, never places dots */
+function miniJump(e){
+  const r = mini.getBoundingClientRect();
+  const k = boardSize() / r.width;
+  camX = (e.clientX - r.left) * k;
+  camY = (e.clientY - r.top) * k;
+  clampCam(); camTween = null; dirty = true;
+}
+let miniDown = false;
+mini.addEventListener('pointerdown', e => { e.stopPropagation(); miniDown = true; mini.setPointerCapture(e.pointerId); miniJump(e); });
+mini.addEventListener('pointermove', e => { if (miniDown) miniJump(e); });
+mini.addEventListener('pointerup',   e => { miniDown = false; });
+mini.addEventListener('pointercancel', () => { miniDown = false; });
+
+document.getElementById('newBtn').addEventListener('click', newGame);
+document.getElementById('sizeSel').addEventListener('change', newGame);
+
+const modeSeg = document.getElementById('modeSeg');
+const diffSeg = document.getElementById('diffSeg');
+
+modeSeg.addEventListener('click', e => {
+  const btn = e.target.closest('button[data-mode]');
+  if (!btn || btn.classList.contains('active')) return;
+  [...modeSeg.children].forEach(b => b.classList.toggle('active', b === btn));
+  mode = btn.dataset.mode;
+  diffSeg.classList.toggle('isHidden', mode !== 'ai');
+  updateWhoLabels();
+  newGame();
+});
+
+diffSeg.addEventListener('click', e => {
+  const btn = e.target.closest('button[data-diff]');
+  if (!btn || btn.classList.contains('active')) return;
+  [...diffSeg.children].forEach(b => b.classList.toggle('active', b === btn));
+  aiDifficulty = btn.dataset.diff;
+});
+
+muteBtn.addEventListener('click', () => {
+  muted = !muted;
+  muteBtn.textContent = muted ? '\u{1F507}' : '\u{1F50A}';
+  muteBtn.setAttribute('aria-pressed', String(muted));
+  if (!muted) ac();
+});
+
+logBtn.addEventListener('click', () => {
+  logPanel.hidden = !logPanel.hidden;
+  logBtn.classList.toggle('on', !logPanel.hidden);
+  logBtn.setAttribute('aria-pressed', String(!logPanel.hidden));
+});
+
+/* ---------------- main loop ---------------- */
+window.addEventListener('resize', resize);
+resize();
+updateWhoLabels();
+newGame();
+
+function frame(){
+  if (camTween){
+    const t = Math.min(1, (performance.now() - camTween.t0) / 320);
+    const ease = 1 - Math.pow(1 - t, 3);
+    camX = camTween.from.x + (camTween.x - camTween.from.x) * ease;
+    camY = camTween.from.y + (camTween.y - camTween.from.y) * ease;
+    clampCam(); dirty = true;
+    if (t >= 1) camTween = null;
+  }
+  if (dirty){
+    const stillAnimating = render();
+    if (minimapDirty){ updateMinimapBitmap(); minimapDirty = false; }
+    renderMini();
+    dirty = stillAnimating;
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
