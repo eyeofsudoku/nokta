@@ -631,10 +631,64 @@ class Game {
     else             { if (sx > 0)     out.push((sy * N + sx - 1) * 4 + 1); }
   }
 
+  // RENDER-ONLY border lookup. A blast can leave territory on a frontier that
+  // never had a drawn line (the boundary used to be interior), so the outline
+  // has to be derived from ownership at draw time. This deliberately does NOT
+  // store an edge: a real edge is a flood barrier, and handing the victim a
+  // barrier that happens to ring the blast lets them reclaim the whole thing
+  // for free on their next move anywhere on the board.
+  // Returns the player whose outline should be drawn, or 0 for none.
+  hBorderOwner(x, y){
+    const N = this.N;
+    if (this.hE[y * this.P + x]) return 0;            // a real line is already drawn
+    const a = y > 0 ? this.owner[((y - 1) * N + x) * 4 + 2] : 0;
+    const b = y < N ? this.owner[(y * N + x) * 4 + 0]       : 0;
+    if (a === b) return 0;
+    return (a && b) ? Math.min(a, b) : (a || b);
+  }
+  vBorderOwner(x, y){
+    const N = this.N;
+    if (this.vE[y * this.P + x]) return 0;
+    const a = x > 0 ? this.owner[(y * N + (x - 1)) * 4 + 1] : 0;
+    const b = x < N ? this.owner[(y * N + x) * 4 + 3]       : 0;
+    if (a === b) return 0;
+    return (a && b) ? Math.min(a, b) : (a || b);
+  }
+
   canBomb(pl){ return this.bombsFor(pl) > 0; }
 
-  // Every edge slot touching a quarter-cell, used to strip lines off ground
-  // that has been destroyed so no orphan outline is left behind.
+  // Every piece of territory must have a line where it meets empty ground.
+  // Destroying the ring turns owned cells neutral, and the line that used to
+  // sit there was an interior line (already cleared) or got stripped with the
+  // dead ground — leaving a survivor with an open side. This re-draws those
+  // borders, owned by whoever still holds the ground.
+  //
+  // Only ever ADDS, and only between two real in-board cells: putting a line
+  // on the board rim would stop flood() seeding from that side and make the
+  // whole outside look enclosed.
+  resealBorders(){
+    const { N, P, owner, hE, vE } = this;
+    for (let y = 1; y < N; y++){
+      for (let x = 0; x < N; x++){
+        const i = y * P + x;
+        if (hE[i]) continue;
+        const above = owner[((y - 1) * N + x) * 4 + 2];
+        const below = owner[(y * N + x) * 4 + 0];
+        if (above > 0 && below === 0) hE[i] = above;
+        else if (below > 0 && above === 0) hE[i] = below;
+      }
+    }
+    for (let y = 0; y < N; y++){
+      for (let x = 1; x < N; x++){
+        const i = y * P + x;
+        if (vE[i]) continue;
+        const left  = owner[(y * N + (x - 1)) * 4 + 1];
+        const right = owner[(y * N + x) * 4 + 3];
+        if (left > 0 && right === 0) vE[i] = left;
+        else if (right > 0 && left === 0) vE[i] = right;
+      }
+    }
+  }
   killEdgesAround(c){
     const N = this.N, P = this.P, t = c & 3, s = c >> 2, sx = s % N, sy = (s / N) | 0;
     if (t === 0){ this.hE[sy * P + sx] = 0; this.dB[s] = 0; this.dA[s] = 0; }
@@ -713,6 +767,7 @@ class Game {
     this.colEarnedQ[pl] += colq;          // bombs feed the token economy
     this.switchSpent[pl] += BOMB_COST;
     this.clearInteriorEdges();
+    this.resealBorders();   // survivors must not be left with an open side
     this.lastPlaced.push({ x: cx, y: cy, pl, time: (typeof performance !== 'undefined' ? performance.now() : 0) });
     if (this.lastPlaced.length > 12) this.lastPlaced.shift();
     return { gainedQ: gained, colQ: colq, dissolvedQ: dissolved, bounds: b };
@@ -1721,7 +1776,7 @@ function render(){
   for (const k in fillPaths) if (fillPaths[k]){ ctx.fillStyle = FILL[k]; ctx.fill(fillPaths[k]); }
 
   // 3) lines — construction (thin) below, territory boundaries (bold) above
-  const consP = { 1: null, 2: null }, bndP = { 1: null, 2: null };
+  const consP = { 1: null, 2: null, 3: null }, bndP = { 1: null, 2: null, 3: null };
   const seg = (grp, o, x1, y1, x2, y2) => {
     const p = grp[o] || (grp[o] = new Path2D());
     p.moveTo(w2sX(x1 * CELL), w2sY(y1 * CELL));
@@ -1753,6 +1808,22 @@ function render(){
       if (o){ const v = G.dAVis(s); if (v) seg(v === 1 ? bndP : consP, o, sx, sy, sx + 1, sy + 1); }
       o = dB[s];
       if (o){ const v = G.dBVis(s); if (v) seg(v === 1 ? bndP : consP, o, sx + 1, sy, sx, sy + 1); }
+    }
+  }
+  // Derived borders: a blast can leave territory facing empty ground with no
+  // stored line (the boundary used to be interior). Draw those as boundaries
+  // without creating edges — a stored edge would be a flood barrier and would
+  // let the victim reclaim the crater for free.
+  for (let y = gy0; y <= gy1; y++){
+    for (let x = gx0; x < gx1; x++){
+      const o = G.hBorderOwner(x, y);
+      if (o) seg(bndP, o, x, y, x + 1, y);
+    }
+  }
+  for (let y = gy0; y < gy1; y++){
+    for (let x = gx0; x <= gx1; x++){
+      const o = G.vBorderOwner(x, y);
+      if (o) seg(bndP, o, x, y, x, y + 1);
     }
   }
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
