@@ -29,14 +29,14 @@
     font-variant-numeric:tabular-nums;
   }
   #board{position:fixed;inset:0;cursor:crosshair;touch-action:none;display:block}
- 
+
   .panel{
     position:fixed;background:rgba(252,250,243,.94);
     border:1px solid var(--line);border-radius:12px;
     box-shadow:0 8px 28px rgba(32,38,58,.12);
     backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
   }
- 
+
   #hud{top:14px;left:14px;padding:13px 15px 12px;width:236px;user-select:none}
   #hud h1{
     font-family:var(--font-display);
@@ -44,7 +44,7 @@
   }
   #hud h1 span{color:var(--blue)}
   #hud .sub{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin:3px 0 11px}
- 
+
   .score{display:flex;align-items:baseline;gap:8px;margin-top:7px}
   .score .dot{width:9px;height:9px;border-radius:50%;flex:none;align-self:center}
   .score .who{font-size:12px;font-weight:600;width:64px}
@@ -58,7 +58,7 @@
   .score .val{font-variant-numeric:tabular-nums;font-size:19px;font-weight:800;margin-left:auto}
   .score .unit{font-size:10px;color:var(--ink-soft)}
   .meta{font-size:10.5px;color:var(--ink-soft);margin:1px 0 4px 17px;font-variant-numeric:tabular-nums}
- 
+
   #turnPill{
     margin-top:10px;padding:6px 10px;border-radius:8px;text-align:center;
     font-size:12px;font-weight:700;letter-spacing:.02em;
@@ -66,7 +66,7 @@
     transition:background .25s,color .25s;
   }
   #turnPill.ai{background:var(--ink);color:#f7f4ea}
- 
+
   #controls{display:flex;gap:7px;margin-top:10px}
   button,select{
     font:inherit;font-size:11.5px;font-weight:600;color:var(--ink);
@@ -76,18 +76,18 @@
   button:hover{border-color:rgba(32,38,58,.4)}
   button:focus-visible,select:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
   #newBtn{flex:1;background:var(--ink);color:#f7f4ea;border-color:var(--ink)}
- 
+
   #miniWrap{top:14px;right:14px;padding:7px}
   #mini{display:block;border-radius:7px;cursor:pointer;touch-action:none}
   #miniLabel{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-soft);text-align:center;margin-top:5px}
- 
+
   #hint{
     bottom:14px;left:50%;transform:translateX(-50%);
     padding:7px 14px;font-size:11px;color:var(--ink-soft);
     letter-spacing:.03em;white-space:nowrap;border-radius:999px;
   }
   #hint b{color:var(--ink);font-weight:600}
- 
+
   .seg{display:flex;gap:4px;margin-top:9px;background:rgba(32,38,58,.06);padding:3px;border-radius:9px}
   .seg button{
     flex:1;border:none;background:transparent;padding:6px 4px;border-radius:7px;
@@ -98,7 +98,7 @@
   .seg button:hover:not(.active){color:var(--ink)}
   .seg button:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
   #diffSeg.isHidden{display:none}
- 
+
   #switchBtn{
     width:100%;margin-top:7px;font-size:11.5px;font-weight:700;
     background:#fff;color:var(--ink);border:1px solid var(--line);
@@ -106,7 +106,15 @@
   #switchBtn:hover:not(:disabled){border-color:rgba(32,38,58,.4)}
   #switchBtn.armed{background:var(--ink);color:var(--paper);border-color:var(--ink)}
   #switchBtn:disabled{opacity:.45;cursor:default}
- 
+
+  #bombBtn{
+    width:100%;margin-top:5px;font-size:11.5px;font-weight:700;
+    background:#fff;color:var(--ink);border:1px solid var(--line);
+  }
+  #bombBtn:hover:not(:disabled){border-color:rgba(32,38,58,.4)}
+  #bombBtn.armed{background:var(--red);color:#fff;border-color:var(--red)}
+  #bombBtn:disabled{opacity:.45;cursor:default}
+
   #netBox{margin-top:9px;padding:9px 10px;border-radius:9px;background:rgba(32,38,58,.06)}
   #netBox.isHidden{display:none}
   #netStatus{font-size:11px;font-weight:600;color:var(--ink-soft);margin-bottom:7px}
@@ -128,7 +136,7 @@
   #joinInput:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
   #netBox button{width:100%}
   #netJoinRow button{width:auto;flex:none}
- 
+
   #muteBtn{
     position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;
     border:1px solid var(--line);background:#fff;cursor:pointer;font-size:12px;line-height:1;
@@ -136,7 +144,7 @@
   }
   #muteBtn:hover{border-color:rgba(32,38,58,.4)}
   #muteBtn:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
- 
+
   #logBtn{
     position:absolute;top:12px;right:44px;width:26px;height:26px;border-radius:50%;
     border:1px solid var(--line);background:#fff;cursor:pointer;font-size:12px;line-height:1;
@@ -145,7 +153,7 @@
   #logBtn:hover{border-color:rgba(32,38,58,.4)}
   #logBtn:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
   #logBtn.on{background:var(--ink);color:#f7f4ea;border-color:var(--ink)}
- 
+
   #focusBtn{
     position:absolute;top:12px;right:76px;width:26px;height:26px;border-radius:50%;
     border:1px solid var(--line);background:#fff;cursor:pointer;font-size:12px;line-height:1;
@@ -155,7 +163,7 @@
   #focusBtn:hover{border-color:rgba(32,38,58,.4)}
   #focusBtn:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
   #focusBtn.on{background:var(--ink);color:#f7f4ea;border-color:var(--ink);opacity:1}
- 
+
   #logPanel{
     position:absolute;top:100%;left:0;margin-top:8px;width:236px;max-height:280px;
     overflow-y:auto;padding:10px 12px;
@@ -166,7 +174,7 @@
   .logEntry:first-child{border-top:none}
   .logEntry .who{font-weight:700;font-size:11.5px}
   .logEntry .detail{font-size:10px;color:var(--ink-soft);margin-top:1px;font-variant-numeric:tabular-nums}
- 
+
   @media (max-width:640px){
     #hud{width:196px;padding:10px 12px}
     #hud h1{font-size:17px}
@@ -185,38 +193,39 @@
 </head>
 <body>
 <canvas id="board"></canvas>
- 
+
 <div class="panel" id="hud">
   <button id="muteBtn" aria-label="Mute sound" aria-pressed="false" title="Mute sound">🔊</button>
   <button id="logBtn" aria-label="Capture log" aria-pressed="false" title="Capture log">📜</button>
   <button id="focusBtn" aria-label="Auto-center on moves" aria-pressed="false" title="Auto-center on far moves (off)">🎯</button>
   <h1>NOK<span>TA</span></h1>
   <div class="sub">grid territory duel</div>
- 
+
   <div class="score">
     <span class="dot" style="background:var(--blue)"></span>
     <input class="who nameIn" id="whoBlue" value="You" maxlength="12" autocomplete="off" spellcheck="false">
     <span class="val" id="sBlue">0</span><span class="unit">area</span>
   </div>
   <div class="meta" id="mBlue">colonized 0 &middot; 1 move/turn</div>
- 
+
   <div class="score">
     <span class="dot" style="background:var(--red)"></span>
     <input class="who nameIn" id="whoRed" value="Red (AI)" maxlength="12" autocomplete="off" spellcheck="false">
     <span class="val" id="sRed">0</span><span class="unit">area</span>
   </div>
   <div class="meta" id="mRed">colonized 0 &middot; 1 move/turn</div>
- 
+
   <div class="score" id="rowGreen" hidden>
     <span class="dot" style="background:var(--green)"></span>
     <input class="who nameIn" id="whoGreen" value="Green" maxlength="12" autocomplete="off" spellcheck="false">
     <span class="val" id="sGreen">0</span><span class="unit">area</span>
   </div>
   <div class="meta" id="mGreen" hidden>colonized 0 &middot; 1 move/turn</div>
- 
+
   <div id="turnPill">Your turn — place a dot</div>
   <button type="button" id="switchBtn" hidden>⇄ Switch a dot</button>
- 
+  <button type="button" id="bombBtn" hidden>💥 Drop a bomb</button>
+
   <div class="seg" id="modeSeg" role="group" aria-label="Game mode">
     <button type="button" data-mode="ai" class="active">Vs AI</button>
     <button type="button" data-mode="pvp">2 Players</button>
@@ -227,7 +236,7 @@
     <button type="button" data-diff="medium" class="active">Medium</button>
     <button type="button" data-diff="hard">Hard</button>
   </div>
- 
+
   <div id="netBox" class="isHidden">
     <div id="netStatus">Not connected</div>
     <div id="netCodeWrap" hidden>
@@ -246,7 +255,7 @@
       </div>
     </div>
   </div>
- 
+
   <div id="controls">
     <button id="newBtn">New game</button>
     <select id="sizeSel" aria-label="Board size">
@@ -257,26 +266,26 @@
       <option value="300">300 × 300</option>
     </select>
   </div>
- 
+
   <div class="panel" id="logPanel" hidden>
     <h2>Capture log</h2>
     <div id="logList"></div>
   </div>
 </div>
- 
+
 <div class="panel" id="miniWrap">
   <canvas id="mini" width="156" height="156" style="width:156px;height:156px"></canvas>
   <div id="miniLabel">tap to jump</div>
 </div>
- 
+
 <div class="panel" id="hint"><b>Click</b> place &middot; <b>drag</b> pan &middot; <b>scroll</b> zoom &middot; close a loop to claim territory &middot; every 10 colonized area = +1 move</div>
- 
+
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
 /*==LOGIC==*/
 /* ================================================================
    GAME LOGIC — DOM-free, unit-testable.
- 
+
    Geometry model (screen coordinates, y grows down):
    - Board of N×N unit squares, (N+1)×(N+1) lattice points.
    - Square (sx,sy): TL=(sx,sy) TR=(sx+1,sy) BR=(sx+1,sy+1) BL=(sx,sy+1)
@@ -293,7 +302,7 @@
      is dA vs dB inside the same square (all other segment pairs meet
      at endpoints at most), so the crossing rule is: a diagonal is
      illegal iff the opposite diagonal of that square exists.
- 
+
    Territory (face detection): after a player pl adds lines, flood-fill
    the quarter-triangle graph from the OUTSIDE, treating only pl's
    edges as barriers. Every cell not reached and not already pl's
@@ -307,13 +316,19 @@
    merely hidden by the renderer, derived from cell ownership.
    ================================================================ */
 'use strict';
- 
+
 const HUMAN = 1, AIP = 2, GREEN = 3;
+
+/* ---- tunable rules (change here, nothing else) -------------------- */
+const COL_PER_SWITCH = 40;   // quarter-cells of lifetime colonization per switch token (40 = 10 area)
+const COL_PER_MOVE   = 400;  // quarter-cells of live colonization per bonus move  (400 = 100 area)
+const BOMB_COST      = 5;    // switch tokens spent to detonate one bomb
+const BOMB_SIZE      = 5;    // blast is BOMB_SIZE x BOMB_SIZE squares; keep ODD so it has a true centre
 function oppOf(p){ return p === 1 ? 2 : 1; }   // 2-player only (AI paths)
- 
+
 class Game {
   constructor(n, np){ this.reset(n, np); }
- 
+
   reset(n, np){
     this.N = n;               // squares per side
     this.P = n + 1;           // points per side
@@ -340,22 +355,23 @@ class Game {
     this.dotList = [];        // {x,y} for fast candidate generation
     this.lastPlaced = [];     // recent placements for UI markers
   }
- 
+
   // Turn order for 2 or 3 players: 1 -> 2 -> (3) -> 1
   nextOf(p){ return (p % this.np) + 1; }
   players(){ const a = []; for (let p = 1; p <= this.np; p++) a.push(p); return a; }
- 
+
   pi(x, y){ return y * this.P + x; }
   inP(x, y){ return x >= 0 && y >= 0 && x < this.P && y < this.P; }
   inS(x, y){ return x >= 0 && y >= 0 && x < this.N && y < this.N; }
- 
+
   area(pl){ return this.scoreQ[pl] / 4; }
   colArea(pl){ return this.colQ[pl] / 4; }
-  movesFor(pl){ return 1 + Math.floor(this.colQ[pl] / 400); } // 400 quarters = 100 area
- 
-  // One dot-switch earned per 10 area (40 quarters) of lifetime colonization.
-  switchesFor(pl){ return Math.floor(this.colEarnedQ[pl] / 40) - this.switchSpent[pl]; }
- 
+  movesFor(pl){ return 1 + Math.floor(this.colQ[pl] / COL_PER_MOVE); }
+
+  // One dot-switch earned per COL_PER_SWITCH quarters of lifetime colonization.
+  switchesFor(pl){ return Math.floor(this.colEarnedQ[pl] / COL_PER_SWITCH) - this.switchSpent[pl]; }
+  bombsFor(pl){ return Math.floor(this.switchesFor(pl) / BOMB_COST); }
+
   totalArea(){ return this.N * this.N; }
   // Win: hold more than a 1/np share of the WHOLE board (half for 2, third for 3).
   winner(){
@@ -363,7 +379,7 @@ class Game {
     for (let p = 1; p <= this.np; p++) if (this.area(p) > need) return p;
     return 0;
   }
- 
+
   /* ---- point <-> incident quarter-cells -------------------------- */
   // The (up to 8) quarter-cells having lattice point (x,y) as a vertex.
   incidentCells(x, y, cb){
@@ -375,23 +391,23 @@ class Game {
     if (x > 0     && y > 0    ){ const b = ((y - 1) * N + (x - 1)) * 4; cb(b + 1); cb(b + 2); } // BR of (x-1,y-1)
     if (x < N     && y > 0    ){ const b = ((y - 1) * N + x) * 4;       cb(b + 2); cb(b + 3); } // BL of (x,y-1)
   }
- 
+
   pointInterior(x, y){ // strictly inside claimed territory -> placement blocked
     let any = false, all = true;
     this.incidentCells(x, y, c => { any = true; if (this.owner[c] === 0) all = false; });
     return any && all;
   }
- 
+
   pointTouchesTerritory(x, y){ // on or inside territory -> dot hidden
     let t = false;
     this.incidentCells(x, y, c => { if (this.owner[c] > 0) t = true; });
     return t;
   }
- 
+
   canPlace(x, y){
     return this.inP(x, y) && this.dots[this.pi(x, y)] === 0 && !this.pointInterior(x, y);
   }
- 
+
   /* ---- legal auto-connections ------------------------------------ */
   // Edges a dot placed at (x,y) by pl would create. Non-mutating.
   // Enforces: dx<=1, dy<=1, same-square corners only, no crossings.
@@ -399,12 +415,12 @@ class Game {
     const res = [];
     const { dots, dA, dB, P, N } = this;
     const at = (px, py) => px >= 0 && py >= 0 && px < P && py < P && dots[py * P + px] === pl;
- 
+
     if (at(x + 1, y)) res.push({ t: 0, i: y * P + x });           // hE right
     if (at(x - 1, y)) res.push({ t: 0, i: y * P + (x - 1) });     // hE left
     if (at(x, y + 1)) res.push({ t: 1, i: y * P + x });           // vE down
     if (at(x, y - 1)) res.push({ t: 1, i: (y - 1) * P + x });     // vE up
- 
+
     // Diagonals — blocked if the crossing (opposite) diagonal exists.
     if (at(x + 1, y + 1) && this.inS(x, y)         && !dB[y * N + x])               res.push({ t: 2, i: y * N + x });               // p is TL, dA(x,y)
     if (at(x - 1, y - 1) && this.inS(x - 1, y - 1) && !dB[(y - 1) * N + (x - 1)])   res.push({ t: 2, i: (y - 1) * N + (x - 1) });   // p is BR
@@ -412,18 +428,18 @@ class Game {
     if (at(x - 1, y + 1) && this.inS(x - 1, y)     && !dA[y * N + (x - 1)])         res.push({ t: 3, i: y * N + (x - 1) });         // p is TR, dB(x-1,y)
     return res;
   }
- 
+
   _edgeArr(t){ return t === 0 ? this.hE : t === 1 ? this.vE : t === 2 ? this.dA : this.dB; }
   applyEdges(list, pl){ for (const e of list) this._edgeArr(e.t)[e.i] = pl; }
   revertEdges(list){ for (const e of list) this._edgeArr(e.t)[e.i] = 0; }
- 
+
   /* ---- planar face detection: flood from outside ----------------- */
   flood(pl){
     const { N, P, hE, vE, dA, dB, visited, stack } = this;
     const ep = ++this.epoch;
     let sp = 0;
     const push = c => { if (visited[c] !== ep){ visited[c] = ep; stack[sp++] = c; } };
- 
+
     // Outside seeds — board border is never a barrier.
     for (let sx = 0; sx < N; sx++){
       if (hE[sx]           !== pl) push((sx) * 4 + 0);                 // top row, N tris
@@ -433,19 +449,19 @@ class Game {
       if (vE[sy * P]       !== pl) push((sy * N) * 4 + 3);             // left col, W tris
       if (vE[sy * P + N]   !== pl) push((sy * N + (N - 1)) * 4 + 1);   // right col, E tris
     }
- 
+
     while (sp > 0){
       const c = stack[--sp];
       const t = c & 3, s = c >> 2;
       const sx = s % N, sy = (s / N) | 0, b = s * 4;
- 
+
       // In-square neighbours. Pair (t, t+1) is blocked by dB when t is
       // even, by dA when t is odd (N-E:dB, E-S:dA, S-W:dB, W-N:dA).
       const n1 = (t + 1) & 3;
       if (((t & 1) === 0 ? dB[s] : dA[s]) !== pl) push(b + n1);
       const n2 = (t + 3) & 3;
       if (((n2 & 1) === 0 ? dB[s] : dA[s]) !== pl) push(b + n2);
- 
+
       // Cross-square neighbours through h/v edge slots.
       if      (t === 0){ if (sy > 0     && hE[sy * P + sx]       !== pl) push(((sy - 1) * N + sx) * 4 + 2); }
       else if (t === 1){ if (sx < N - 1 && vE[sy * P + sx + 1]   !== pl) push((sy * N + sx + 1) * 4 + 3); }
@@ -453,7 +469,7 @@ class Game {
       else             { if (sx > 0     && vE[sy * P + sx]       !== pl) push((sy * N + sx - 1) * 4 + 1); }
     }
   }
- 
+
   // Claim every cell unreachable from outside that pl doesn't own yet.
   commitCapture(pl){
     const { owner, visited, colFlag } = this;
@@ -481,7 +497,7 @@ class Game {
     this.colEarnedQ[pl] += colq;   // lifetime, monotonic — drives switch tokens
     return { q, colq };
   }
- 
+
   // After a capture, delete edges that are strictly INTERIOR to a single
   // player's territory (both adjacent quarter-cells owned by the same
   // player). These are exactly the lines the renderer already hides, so
@@ -522,7 +538,7 @@ class Game {
       if (dB[s]){ const a = owner[s * 4 + 0], b = owner[s * 4 + 1]; if (a > 0 && a === b) dB[s] = 0; }
     }
   }
- 
+
   countCapture(pl){ // simulation: tally only, no mutation
     const { owner, visited } = this;
     const ep = this.epoch;
@@ -532,7 +548,7 @@ class Game {
     }
     return { q, colq };
   }
- 
+
   /* ---- dot switch: spend a token to flip an opponent's dot --------- */
   // The 8 edge slots incident to lattice point (x,y). Mirrors newEdges'
   // geometry exactly — an edge slot only ever exists between two dots of
@@ -550,13 +566,13 @@ class Game {
     if (this.inS(x - 1, y))             res.push({ t: 3, i: y * N + (x - 1) });
     return res;
   }
- 
+
   canSwitch(x, y, pl){
     if (!this.inP(x, y)) return false;
     const d = this.dots[this.pi(x, y)];
     return d !== 0 && d !== pl && this.switchesFor(pl) > 0;
   }
- 
+
   // Flip an enemy dot to pl. Edges are rewired (the victim's connections
   // through this point die, pl's legal connections form), then the normal
   // flood/capture runs — so a switch CAN close a loop and take territory.
@@ -564,17 +580,17 @@ class Game {
     if (!this.canSwitch(x, y, pl)) return null;
     const idx = this.pi(x, y);
     const victim = this.dots[idx];
- 
+
     // drop the victim's edges through this point
     for (const e of this.incidentEdges(x, y)){
       const arr = this._edgeArr(e.t);
       if (arr[e.i] === victim) arr[e.i] = 0;
     }
- 
+
     this.dots[idx] = pl;
     const eds = this.newEdges(x, y, pl);
     this.applyEdges(eds, pl);
- 
+
     let cap = { q: 0, colq: 0 };
     if (eds.length >= 2){
       this.flood(pl);
@@ -586,7 +602,122 @@ class Game {
     if (this.lastPlaced.length > 12) this.lastPlaced.shift();
     return { victim, edges: eds.length, gainedQ: cap.q, colQ: cap.colq };
   }
- 
+
+  /* ---- BOMB: spend BOMB_COST tokens to flatten a square ------------ */
+  // Blast covers a BOMB_SIZE square centred on square (cx,cy), clipped to the
+  // board so a centre near the edge still works.
+  blastBounds(cx, cy){
+    const h = (BOMB_SIZE - 1) >> 1;
+    return {
+      x0: Math.max(0, cx - h), x1: Math.min(this.N - 1, cx + h),
+      y0: Math.max(0, cy - h), y1: Math.min(this.N - 1, cy + h)
+    };
+  }
+  inBlast(c, b){
+    const s = c >> 2, sx = s % this.N, sy = (s / this.N) | 0;
+    return sx >= b.x0 && sx <= b.x1 && sy >= b.y0 && sy <= b.y1;
+  }
+
+  // Geometric neighbours of a quarter-cell, IGNORING lines. Territory
+  // "regions" are contiguous blobs of one owner, not line-bounded faces —
+  // a bomb dissolves the whole blob it clips into.
+  cellNeighbours(c, out){
+    const N = this.N, t = c & 3, s = c >> 2, sx = s % N, sy = (s / N) | 0, b = s * 4;
+    out.length = 0;
+    out.push(b + ((t + 1) & 3), b + ((t + 3) & 3));
+    if      (t === 0){ if (sy > 0)     out.push(((sy - 1) * N + sx) * 4 + 2); }
+    else if (t === 1){ if (sx < N - 1) out.push((sy * N + sx + 1) * 4 + 3); }
+    else if (t === 2){ if (sy < N - 1) out.push(((sy + 1) * N + sx) * 4 + 0); }
+    else             { if (sx > 0)     out.push((sy * N + sx - 1) * 4 + 1); }
+  }
+
+  canBomb(pl){ return this.bombsFor(pl) > 0; }
+
+  // Every edge slot touching a quarter-cell, used to strip lines off ground
+  // that has been destroyed so no orphan outline is left behind.
+  killEdgesAround(c){
+    const N = this.N, P = this.P, t = c & 3, s = c >> 2, sx = s % N, sy = (s / N) | 0;
+    if (t === 0){ this.hE[sy * P + sx] = 0; this.dB[s] = 0; this.dA[s] = 0; }
+    if (t === 1){ this.vE[sy * P + sx + 1] = 0; this.dB[s] = 0; this.dA[s] = 0; }
+    if (t === 2){ this.hE[(sy + 1) * P + sx] = 0; this.dB[s] = 0; this.dA[s] = 0; }
+    if (t === 3){ this.vE[sy * P + sx] = 0; this.dB[s] = 0; this.dA[s] = 0; }
+  }
+
+  // Blast rules:
+  //  - inside the square: enemy ground is colonized, neutral ground is claimed
+  //  - the one-square ring immediately around it: enemy ground is DESTROYED
+  //    (back to neutral, lines stripped) — this is what severs a region
+  //  - anything further away keeps its owner: a 3x2 clipped on one side
+  //    leaves 1x2 taken, 1x2 destroyed, 1x2 still the victim's
+  //  - the blast draws its own perimeter, so the new territory has a real
+  //    border that blocks placement instead of an invisible edge
+  bombAt(cx, cy, pl){
+    if (!this.inS(cx, cy) || !this.canBomb(pl)) return null;
+    const b = this.blastBounds(cx, cy);
+    const { owner, colFlag, N, P } = this;
+    let gained = 0, colq = 0, dissolved = 0;
+
+    // 1. inside the blast
+    for (let sy = b.y0; sy <= b.y1; sy++){
+      for (let sx = b.x0; sx <= b.x1; sx++){
+        const base = (sy * N + sx) * 4;
+        for (let t = 0; t < 4; t++){
+          const c = base + t, prev = owner[c];
+          if (prev === pl) continue;
+          if (prev !== 0){
+            this.scoreQ[prev]--;
+            if (colFlag[c]) this.colQ[prev]--;
+            colFlag[c] = 1; colq++;
+          }
+          owner[c] = pl; this.scoreQ[pl]++; gained++;
+        }
+      }
+    }
+
+    // 2. the adjacent ring — enemy ground here is destroyed, not taken
+    const rx0 = Math.max(0, b.x0 - 1), rx1 = Math.min(N - 1, b.x1 + 1);
+    const ry0 = Math.max(0, b.y0 - 1), ry1 = Math.min(N - 1, b.y1 + 1);
+    for (let sy = ry0; sy <= ry1; sy++){
+      for (let sx = rx0; sx <= rx1; sx++){
+        if (sx >= b.x0 && sx <= b.x1 && sy >= b.y0 && sy <= b.y1) continue; // inside, handled
+        const base = (sy * N + sx) * 4;
+        for (let t = 0; t < 4; t++){
+          const c = base + t, prev = owner[c];
+          if (prev === 0 || prev === pl) continue;
+          this.scoreQ[prev]--;
+          if (colFlag[c]) this.colQ[prev]--;
+          owner[c] = 0; colFlag[c] = 0; dissolved++;
+          this.killEdgesAround(c);      // no orphan outline over dead ground
+        }
+      }
+    }
+
+    // 3. the blast draws its own wall: dots + edges around the square
+    const px1 = b.x1 + 1, py1 = b.y1 + 1;
+    const claimPoint = (x, y) => {
+      const i = y * P + x, prev = this.dots[i];
+      if (prev === pl) return;
+      if (prev !== 0) for (const e of this.incidentEdges(x, y)){
+        const arr = this._edgeArr(e.t);
+        if (arr[e.i] === prev) arr[e.i] = 0;   // victim's links through this point die
+      }
+      this.dots[i] = pl;
+      if (prev === 0) this.dotList.push({ x, y });
+    };
+    for (let x = b.x0; x <= px1; x++){ claimPoint(x, b.y0); claimPoint(x, py1); }
+    for (let y = b.y0; y <= py1; y++){ claimPoint(b.x0, y); claimPoint(px1, y); }
+    for (let x = b.x0; x <= b.x1; x++){ this.hE[b.y0 * P + x] = pl; this.hE[py1 * P + x] = pl; }
+    for (let y = b.y0; y <= b.y1; y++){ this.vE[y * P + b.x0] = pl; this.vE[y * P + px1] = pl; }
+
+    this.colQ[pl] += colq;
+    this.colEarnedQ[pl] += colq;          // bombs feed the token economy
+    this.switchSpent[pl] += BOMB_COST;
+    this.clearInteriorEdges();
+    this.lastPlaced.push({ x: cx, y: cy, pl, time: (typeof performance !== 'undefined' ? performance.now() : 0) });
+    if (this.lastPlaced.length > 12) this.lastPlaced.shift();
+    return { gainedQ: gained, colQ: colq, dissolvedQ: dissolved, bounds: b };
+  }
+
   /* ---- the single mutation API (human and AI both use this) ------ */
   place(x, y, pl){
     if (!this.canPlace(x, y)) return null;
@@ -606,7 +737,7 @@ class Game {
     if (this.lastPlaced.length > 12) this.lastPlaced.shift();
     return { edges: eds.length, gainedQ: cap.q, colQ: cap.colq };
   }
- 
+
   simPlace(x, y, pl){ // try a move, measure capture, roll everything back
     if (!this.canPlace(x, y)) return null;
     const idx = this.pi(x, y);
@@ -623,7 +754,7 @@ class Game {
     this.dots[idx] = 0;
     return res;
   }
- 
+
   /* ---- render-side visibility (derived, never stored) ------------ */
   // 0 = hidden interior line, 1 = territory boundary, 2 = free construction line
   hEdgeVis(x, y){
@@ -650,7 +781,7 @@ class Game {
     if (a > 0 && b > 0) return 0;
     return (a > 0 || b > 0) ? 1 : 2;
   }
- 
+
   // Deep, independent copy — used by the hard-difficulty AI to look one move
   // ahead without touching the real game state. visited/stack are scratch
   // buffers (re-derived every flood() call) so they're reallocated fresh
@@ -677,7 +808,7 @@ class Game {
     return g;
   }
 }
- 
+
 /* ---- tiered AI: same rules, same place() API ---------------------
    easy/medium/hard share one scoring pass; hard adds a genuine one-ply
    lookahead via Game.clone(), penalizing AI moves that hand the human a
@@ -687,7 +818,7 @@ const AI_TUNING = {
   medium: { rndW: 3,  simBudget: N => N <= 160 ? 22 : 12, blockCap: N => N <= 160 ? 22 : 12, blockChance: 1.0, lookahead: 0 },
   hard:   { rndW: 1,  simBudget: N => N <= 160 ? 26 : 14, blockCap: N => N <= 160 ? 26 : 14, blockChance: 1.0, lookahead: 5 }
 };
- 
+
 // Best-value closing move for player pl on board G, capped to a candidate
 // shortlist for speed. Shared by threat-blocking and the hard-mode lookahead.
 function findBestReply(G, pl, cap){
@@ -720,12 +851,12 @@ function findBestReply(G, pl, cap){
   }
   return best;
 }
- 
+
 function chooseAIMove(G, rnd, difficulty){
   rnd = rnd || Math.random;
   const tune = AI_TUNING[difficulty] || AI_TUNING.medium;
   const P = G.P, N = G.N;
- 
+
   // Candidates: empty, legal points within Chebyshev 2 of any dot.
   const cand = new Set();
   for (const d of G.dotList){
@@ -736,7 +867,7 @@ function chooseAIMove(G, rnd, difficulty){
       if (G.dots[k] === 0) cand.add(k);
     }
   }
- 
+
   const list = [];
   for (const k of cand){
     const x = k % P, y = (k / P) | 0;
@@ -755,9 +886,9 @@ function chooseAIMove(G, rnd, difficulty){
     list.push({ x, y, k, edges: eds.length, s });
   }
   if (!list.length) return null;
- 
+
   list.sort((a, b) => b.s - a.s);
- 
+
   // Deep-evaluate real capture potential for closable candidates.
   const simBudget = tune.simBudget(N);
   const deep = list.filter(o => o.edges >= 2).slice(0, simBudget);
@@ -765,7 +896,7 @@ function chooseAIMove(G, rnd, difficulty){
     const r = G.simPlace(o.x, o.y, AIP);
     if (r) o.s += r.q * 25 + r.colq * 45; // area*100, colonized extra
   }
- 
+
   // Block the human's best immediate capture by taking that point.
   // Easy sometimes skips this on purpose so it stays beatable.
   if (rnd() < tune.blockChance){
@@ -776,9 +907,9 @@ function chooseAIMove(G, rnd, difficulty){
       f.s += bestT.value * 0.95;
     }
   }
- 
+
   list.sort((a, b) => b.s - a.s);
- 
+
   // Hard only: for the top few candidates, actually play them out on a
   // clone and see how big a reply the human would get — then discount
   // moves that hand back a big capture. Time-boxed to stay responsive.
@@ -795,28 +926,28 @@ function chooseAIMove(G, rnd, difficulty){
     }
     list.sort((a, b) => b.s - a.s);
   }
- 
+
   return list[0];
 }
- 
+
 if (typeof globalThis !== 'undefined'){
   globalThis.Game = Game;
   globalThis.chooseAIMove = chooseAIMove;
   globalThis.oppOf = oppOf;
 }
 /*==ENDLOGIC==*/
- 
+
 /* ================================================================
    UI / RENDERER — draws only from state, never mutates game logic.
    ================================================================ */
 (function(){
 'use strict';
- 
+
 const cv   = document.getElementById('board');
 const ctx  = cv.getContext('2d');
 const mini = document.getElementById('mini');
 const mctx = mini.getContext('2d');
- 
+
 const COL = { 1: '#233bd1', 2: '#c31f3f', 3: '#0f7a3d' };
 const COL_RGB = { 1: '35,59,209', 2: '195,31,63', 3: '15,122,61' };
 // '<owner>_<colonized>' — colonized cells shift toward violet, same as the
@@ -828,7 +959,7 @@ const FILL = {
 };
 const PAPER = '#f7f4ea', DESK = '#e6e1d2';
 const GRID_MINOR = 'rgba(96,120,178,0.16)', GRID_MAJOR = 'rgba(96,120,178,0.30)';
- 
+
 const CELL = 26;                    // world px per grid cell at zoom 1
 let game = new Game(150);
 let camX = 0, camY = 0, zoom = 1;
@@ -848,7 +979,7 @@ let captureAnims = [];              // {cellSet,seedWX,seedWY,maxDist,born,durat
 let particles = [];                 // {wx,wy,vx,vy,born,life,color,size}
 let camTween = null;                // {x,y,from:{x,y},t0}
 let mm = document.createElement('canvas'); // minimap offscreen, 1px per square
- 
+
 const sBlue = document.getElementById('sBlue'), sRed = document.getElementById('sRed');
 const mBlue = document.getElementById('mBlue'), mRed = document.getElementById('mRed');
 const whoBlue = document.getElementById('whoBlue'), whoRed = document.getElementById('whoRed');
@@ -857,30 +988,44 @@ const sGreen = document.getElementById('sGreen'), mGreen = document.getElementBy
 const rowGreen = document.getElementById('rowGreen');
 const nameIn = { 1: whoBlue, 2: whoRed, 3: whoGreen };
 const switchBtn = document.getElementById('switchBtn');
-let switchArmed = false;
+const bombBtn = document.getElementById('bombBtn');
+let armedMode = null;              // null | 'switch' | 'bomb'
 let gameOver = false;
- 
-// Only offered when it's genuinely your move and you hold a token; arming is
-// cancelled whenever that stops being true, so the board can't be left in a
-// state where a click means something the player no longer expects.
+
+// Kept as a getter so the existing render/hover code reads naturally.
+function isArmed(m){ return armedMode === m; }
+
 function updateSwitchBtn(){
   const mine = (mode === 'online') ? (net.connected && currentPlayer === net.myPl)
                                    : (mode === 'pvp' || currentPlayer === HUMAN);
   const tokens = game.switchesFor(currentPlayer);
-  const usable = mine && !locked && !gameOver && tokens > 0;
+  const bombs = game.bombsFor(currentPlayer);
+  const live = mine && !locked && !gameOver;
+
   switchBtn.hidden = !(mine && !gameOver && tokens > 0);
-  switchBtn.disabled = !usable;
-  if (!usable && switchArmed) switchArmed = false;
-  switchBtn.classList.toggle('armed', switchArmed);
-  switchBtn.textContent = switchArmed
+  switchBtn.disabled = !(live && tokens > 0);
+  switchBtn.classList.toggle('armed', armedMode === 'switch');
+  switchBtn.textContent = armedMode === 'switch'
     ? `\u21c4 Pick an opponent dot (${tokens})`
     : `\u21c4 Switch a dot (${tokens})`;
+
+  bombBtn.hidden = !(mine && !gameOver && bombs > 0);
+  bombBtn.disabled = !(live && bombs > 0);
+  bombBtn.classList.toggle('armed', armedMode === 'bomb');
+  bombBtn.textContent = armedMode === 'bomb'
+    ? `\u{1F4A5} Pick the blast centre (${bombs})`
+    : `\u{1F4A5} Drop a bomb (${bombs})`;
+
+  if (!live && armedMode) armedMode = null;
 }
- 
+
 switchBtn.addEventListener('click', () => {
-  switchArmed = !switchArmed;
-  updateSwitchBtn();
-  dirty = true;
+  armedMode = armedMode === 'switch' ? null : 'switch';
+  updateSwitchBtn(); dirty = true;
+});
+bombBtn.addEventListener('click', () => {
+  armedMode = armedMode === 'bomb' ? null : 'bomb';
+  updateSwitchBtn(); dirty = true;
 });
 const pill  = document.getElementById('turnPill');
 const muteBtn = document.getElementById('muteBtn');
@@ -900,7 +1045,7 @@ const joinBtn = document.getElementById('joinBtn');
 const joinInput = document.getElementById('joinInput');
 const npSeg = document.getElementById('npSeg');
 const sizeSel = document.getElementById('sizeSel');
- 
+
 /* ---------------- sound (synthesized, no audio files) -------------- */
 let muted = false;
 let actx = null;
@@ -939,7 +1084,7 @@ function sfxCapture(gainedQ, colonized){
     tone(f, 0.15 + i * 0.02, { type: colonized ? 'sawtooth' : 'triangle', gain: 0.12 - i * 0.02, delay: i * 0.07, glide: f * 1.35 });
   }
 }
- 
+
 const fmt = v => (v % 1 === 0 ? v.toFixed(0) : v.toFixed(1));
 const boardSize = () => game.N * CELL;
 const w2sX = wx => (wx - camX) * zoom + W / 2;
@@ -953,7 +1098,7 @@ function clampCam(){
   camX = Math.max(0, Math.min(bs, camX));
   camY = Math.max(0, Math.min(bs, camY));
 }
- 
+
 /* ---------------- HUD ---------------- */
 function metaLine(pl){
   const mv = game.movesFor(pl);
@@ -997,7 +1142,7 @@ function updateWhoLabels(){
   }
 }
 function playerName(pl){ return (nameIn[pl] && nameIn[pl].value.trim()) || defaultName(pl); }
- 
+
 for (let p = 1; p <= 3; p++){
   nameIn[p].addEventListener('input', () => {
     nameTouched[p] = nameIn[p].value.trim().length > 0;
@@ -1006,7 +1151,7 @@ for (let p = 1; p <= 3; p++){
     dirty = true;
   });
 }
- 
+
 /* ---------------- capture juice: ink-bleed anim + particles -------- */
 function registerCaptureAnim(before, after, x, y, pl, r){
   const N = game.N;
@@ -1026,7 +1171,7 @@ function registerCaptureAnim(before, after, x, y, pl, r){
   captureAnims.push({ cellSet: new Set(cells), seedWX, seedWY, maxDist: maxDist || CELL, born: performance.now(), duration, pl, areaQ: r.gainedQ });
   spawnParticles(seedWX, seedWY, pl, r.gainedQ);
 }
- 
+
 function spawnParticles(wx, wy, pl, gainedQ){
   const area = gainedQ / 4;
   if (area < 1) return; // keep tiny closes clean — juice scales with capture size
@@ -1041,7 +1186,7 @@ function spawnParticles(wx, wy, pl, gainedQ){
     });
   }
 }
- 
+
 /* ---------------- turn flow (vs AI or local 2-player) -------------- */
 function startTurn(pl){
   currentPlayer = pl;
@@ -1074,7 +1219,7 @@ function startTurn(pl){
   updateSwitchBtn();
   dirty = true;
 }
- 
+
 function afterPlace(x, y, pl, r, before){
   moveCounter++;
   sfxPlace(pl);
@@ -1098,7 +1243,7 @@ function afterPlace(x, y, pl, r, before){
   }
   minimapDirty = true; dirty = true; updateHUD();
 }
- 
+
 function renderLog(){
   if (!captureLog.length){ logList.innerHTML = '<div class="detail">No captures yet.</div>'; return; }
   let html = '';
@@ -1114,7 +1259,7 @@ function renderLog(){
   }
   logList.innerHTML = html;
 }
- 
+
 // Single code path for applying a placement, used by BOTH the local click
 // and an incoming networked move. Keeping one path is what keeps the two
 // peers deterministic: same move sequence in, same board state out.
@@ -1127,7 +1272,7 @@ function doMove(gx, gy, pl){
   advanceTurn(pl);
   return true;
 }
- 
+
 // A switch spends one of the turn's moves, exactly like placing a dot, so the
 // turn structure stays "movesLeft actions per turn" and the netcode can treat
 // both as one action in the same ordered stream.
@@ -1141,18 +1286,29 @@ function advanceTurn(pl){
     startTurn(game.nextOf(pl));
   }
 }
- 
+
+function doBomb(cx, cy, pl){
+  if (!game.canBomb(pl)) return false;
+  const before = game.owner.slice();
+  const r = game.bombAt(cx, cy, pl);
+  if (!r) return false;
+  armedMode = null;
+  afterPlace(cx, cy, pl, { gainedQ: r.gainedQ, colQ: r.colQ }, before);
+  advanceTurn(pl);
+  return true;
+}
+
 function doSwitch(gx, gy, pl){
   if (!game.canSwitch(gx, gy, pl)) return false;
   const before = game.owner.slice();
   const r = game.switchDot(gx, gy, pl);
   if (!r) return false;
-  switchArmed = false;
+  armedMode = null;
   afterPlace(gx, gy, pl, { gainedQ: r.gainedQ, colQ: r.colQ }, before);
   advanceTurn(pl);
   return true;
 }
- 
+
 function checkWin(){
   const w = game.winner();
   if (!w) return false;
@@ -1164,22 +1320,33 @@ function checkWin(){
   dirty = true;
   return true;
 }
- 
+
 function turnLabel(pl){
   if (mode === 'online') return pl === net.myPl ? 'Your turn' : playerName(pl) + '\u2019s turn';
   if (mode === 'pvp')    return playerName(pl) + '\u2019s turn';
   return pl === HUMAN ? 'Your turn' : playerName(pl) + '\u2019s turn';
 }
- 
+
 function onBoardClick(gx, gy){
   if (locked) return;
   // switch mode: the click targets an opponent's dot instead of an empty point
-  if (switchArmed){
+  if (armedMode === 'switch'){
     if (mode === 'online' && (!net.connected || currentPlayer !== net.myPl)) return;
     const pl = currentPlayer;
     if (!game.canSwitch(gx, gy, pl)) return;   // not a valid target: ignore, stay armed
     if (!doSwitch(gx, gy, pl)) return;
     if (mode === 'online') netSend({ t: 's', x: gx, y: gy, pl });
+    return;
+  }
+  if (armedMode === 'bomb'){
+    if (mode === 'online' && (!net.connected || currentPlayer !== net.myPl)) return;
+    const pl = currentPlayer;
+    // the blast centre is a SQUARE, and the click gives a lattice point —
+    // clamp so a click near the board edge still resolves to a real square
+    const cx = Math.max(0, Math.min(game.N - 1, gx));
+    const cy = Math.max(0, Math.min(game.N - 1, gy));
+    if (!doBomb(cx, cy, pl)) return;
+    if (mode === 'online') netSend({ t: 'b', x: cx, y: cy, pl });
     return;
   }
   if (!game.canPlace(gx, gy)) return;
@@ -1191,7 +1358,7 @@ function onBoardClick(gx, gy){
   // so a multi-move turn appears live on the other side rather than in one lump
   if (mode === 'online') netSend({ t: 'm', x: gx, y: gy, pl });
 }
- 
+
 function aiTurn(){
   const sess = session;
   const step = () => {
@@ -1213,7 +1380,7 @@ function aiTurn(){
   };
   setTimeout(step, 420);
 }
- 
+
 function panToIfOffscreen(gx, gy){
   if (!autoFocus) return;   // single choke point — all callers respect the toggle
   const sx = w2sX(gx * CELL), sy = w2sY(gy * CELL), m = 60;
@@ -1221,7 +1388,7 @@ function panToIfOffscreen(gx, gy){
     camTween = { x: gx * CELL, y: gy * CELL, from: { x: camX, y: camY }, t0: performance.now() };
   }
 }
- 
+
 /* ---------------- online play (WebRTC via PeerJS) ------------------
    Only moves travel over the wire — {t:'m',x,y,pl} — never board state.
    Both peers run the identical deterministic engine, so replaying the
@@ -1241,19 +1408,19 @@ const net = {
   code: null,
   np: 2                // seats in this room
 };
- 
+
 function netSetStatus(text, kind){
   netStatus.textContent = text;
   netStatus.classList.toggle('live', kind === 'live');
   netStatus.classList.toggle('err', kind === 'err');
 }
- 
+
 function sendTo(conn, msg){
   if (conn && conn.open){
     try { conn.send(msg); } catch (e){ netSetStatus('Send failed', 'err'); }
   }
 }
- 
+
 // Local action -> everyone else. Host fans out to each guest; a guest only has
 // the host to tell, and the host re-broadcasts on its behalf.
 function netSend(msg){
@@ -1263,20 +1430,20 @@ function netSend(msg){
     sendTo(net.conn, msg);
   }
 }
- 
+
 // Host only: pass a guest's action on to the OTHER guest(s).
 function relay(msg, fromSeat){
   if (!net.isHost) return;
   for (const seat in net.conns) if (Number(seat) !== fromSeat) sendTo(net.conns[seat], msg);
 }
- 
+
 function makeCode(){
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 — spoken over a call
   let s = '';
   for (let i = 0; i < 4; i++) s += alphabet[Math.floor(Math.random() * alphabet.length)];
   return s;
 }
- 
+
 function netTeardown(){
   if (net.conn){ try { net.conn.close(); } catch (e){} }
   for (const seat in net.conns){ try { net.conns[seat].close(); } catch (e){} }
@@ -1284,9 +1451,9 @@ function netTeardown(){
   net.peer = null; net.conn = null; net.conns = {};
   net.connected = false; net.myPl = null; net.code = null;
 }
- 
+
 function seatsFilled(){ return 1 + Object.keys(net.conns).length; }
- 
+
 // Applies an action that arrived from the wire. Shared by host and guests so
 // remote handling is identical everywhere.
 function applyRemote(msg){
@@ -1298,12 +1465,16 @@ function applyRemote(msg){
     if (msg.pl === net.myPl) return;
     if (msg.pl !== currentPlayer) return;
     if (doSwitch(msg.x, msg.y, msg.pl)) panToIfOffscreen(msg.x, msg.y);
+  } else if (msg.t === 'b'){
+    if (msg.pl === net.myPl) return;
+    if (msg.pl !== currentPlayer) return;
+    if (doBomb(msg.x, msg.y, msg.pl)) panToIfOffscreen(msg.x, msg.y);
   } else if (msg.t === 'name'){
     if (nameIn[msg.pl]){ nameIn[msg.pl].value = String(msg.name || '').slice(0, 12); nameTouched[msg.pl] = true; }
     updateHUD(); dirty = true;
   }
 }
- 
+
 // HOST side: a guest has arrived and been given `seat`.
 function wireHostConn(conn, seat){
   net.conns[seat] = conn;
@@ -1314,7 +1485,7 @@ function wireHostConn(conn, seat){
       relay(msg, seat);                 // other guest needs the name too
       return;
     }
-    if (msg.t === 'm' || msg.t === 's'){
+    if (msg.t === 'm' || msg.t === 's' || msg.t === 'b'){
       if (msg.pl !== seat) return;      // a guest may only act as its own seat
       applyRemote(msg);
       relay(msg, seat);                 // forward to the third player
@@ -1328,14 +1499,14 @@ function wireHostConn(conn, seat){
     netSend({ t: 'left', pl: seat });
   });
   conn.on('error', () => netSetStatus('Connection error', 'err'));
- 
+
   conn.on('open', () => {
     // tell the newcomer who it is and how big the room is
     sendTo(conn, { t: 'seat', pl: seat, np: net.np, size: parseInt(sizeSel.value, 10) });
     // share names already known
     for (let p = 1; p <= net.np; p++)
       if (nameTouched[p]) sendTo(conn, { t: 'name', pl: p, name: nameIn[p].value });
- 
+
     if (seatsFilled() < net.np){
       netSetStatus(`Waiting \u2014 ${seatsFilled()}/${net.np} joined`, 'live');
     } else {
@@ -1348,7 +1519,7 @@ function wireHostConn(conn, seat){
     }
   });
 }
- 
+
 // GUEST side: the single link back to the host.
 function wireGuestConn(conn){
   net.conn = conn;
@@ -1383,7 +1554,7 @@ function wireGuestConn(conn){
   });
   conn.on('error', () => netSetStatus('Connection error', 'err'));
 }
- 
+
 function createRoom(){
   if (typeof Peer === 'undefined'){ netSetStatus('PeerJS failed to load — need internet', 'err'); return; }
   const wantNp = parseInt((npSeg.querySelector('button.active') || {}).dataset?.np || '2', 10);
@@ -1411,7 +1582,7 @@ function createRoom(){
     else netSetStatus('Network error — retry', 'err');
   });
 }
- 
+
 function joinRoom(){
   if (typeof Peer === 'undefined'){ netSetStatus('PeerJS failed to load — need internet', 'err'); return; }
   const code = (joinInput.value || '').trim().toUpperCase();
@@ -1429,7 +1600,7 @@ function joinRoom(){
     else netSetStatus('Network error — retry', 'err');
   });
 }
- 
+
 function newGame(){
   session++;
   game = new Game(parseInt(sizeSel.value, 10), (mode === 'online' && net.np === 3) ? 3 : 2);
@@ -1442,7 +1613,7 @@ function newGame(){
   minimapDirty = true; dirty = true;
   startTurn(HUMAN);
 }
- 
+
 /* ---------------- main canvas rendering ---------------- */
 function resize(){
   dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -1451,17 +1622,17 @@ function resize(){
   cv.style.width = W + 'px'; cv.style.height = H + 'px';
   dirty = true;
 }
- 
+
 function render(){
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = DESK;
   ctx.fillRect(0, 0, W, H);
- 
+
   const G = game, N = G.N, P = G.P;
   const now = performance.now();
   const bs = boardSize();
   const px0 = w2sX(0), py0 = w2sY(0), pw = bs * zoom;
- 
+
   // capture-reveal wavefronts (ink-bleed): cells still mid-animation get
   // pulled out of the batched fill pass below and drawn individually with
   // a per-triangle reveal alpha instead.
@@ -1483,7 +1654,7 @@ function render(){
     }
     if (!hot.size) hot = null;
   }
- 
+
   // paper sheet
   ctx.save();
   ctx.shadowColor = 'rgba(32,38,58,.20)';
@@ -1491,17 +1662,17 @@ function render(){
   ctx.fillStyle = PAPER;
   ctx.fillRect(px0, py0, pw, pw);
   ctx.restore();
- 
+
   // visible grid range
   const gx0 = Math.max(0, Math.floor(s2wX(0) / CELL));
   const gx1 = Math.min(N, Math.ceil(s2wX(W) / CELL));
   const gy0 = Math.max(0, Math.floor(s2wY(0) / CELL));
   const gy1 = Math.min(N, Math.ceil(s2wY(H) / CELL));
   const cz = CELL * zoom;
- 
+
   ctx.save();
   ctx.beginPath(); ctx.rect(px0, py0, pw, pw); ctx.clip();
- 
+
   // 1) grid — minor lines fade out when cells get tiny
   const showMinor = cz >= 7;
   ctx.lineWidth = 1;
@@ -1515,7 +1686,7 @@ function render(){
   for (let x = Math.ceil(gx0 / 10) * 10; x <= gx1; x += 10){ const sx = w2sX(x * CELL); ctx.moveTo(sx, py0); ctx.lineTo(sx, py0 + pw); }
   for (let y = Math.ceil(gy0 / 10) * 10; y <= gy1; y += 10){ const sy = w2sY(y * CELL); ctx.moveTo(px0, sy); ctx.lineTo(px0 + pw, sy); }
   ctx.stroke();
- 
+
   // 2) territory fills — settled cells batch into one pass as before; a
   // cell still inside its ink-bleed window is drawn individually at its
   // current reveal alpha instead of joining the batch.
@@ -1548,7 +1719,7 @@ function render(){
   }
   ctx.globalAlpha = 1;
   for (const k in fillPaths) if (fillPaths[k]){ ctx.fillStyle = FILL[k]; ctx.fill(fillPaths[k]); }
- 
+
   // 3) lines — construction (thin) below, territory boundaries (bold) above
   const consP = { 1: null, 2: null }, bndP = { 1: null, 2: null };
   const seg = (grp, o, x1, y1, x2, y2) => {
@@ -1591,7 +1762,7 @@ function render(){
   ctx.globalAlpha = 1;
   ctx.lineWidth = Math.max(1.6, Math.min(4.2, 2.7 * zoom));
   for (const k in bndP) if (bndP[k]){ ctx.strokeStyle = COL[k]; ctx.stroke(bndP[k]); }
- 
+
   // 4) dots — only those not on / inside claimed territory
   const dotR = Math.max(2, Math.min(6, 0.165 * cz));
   const dotP = { 1: null, 2: null };
@@ -1605,7 +1776,7 @@ function render(){
     }
   }
   for (const k in dotP) if (dotP[k]){ ctx.fillStyle = COL[k]; ctx.fill(dotP[k]); }
- 
+
   // last-move pulse rings
   let anim = false;
   for (const m of G.lastPlaced){
@@ -1618,7 +1789,7 @@ function render(){
     ctx.strokeStyle = COL[m.pl]; ctx.globalAlpha = a * 0.65; ctx.lineWidth = 2;
     ctx.stroke(); ctx.globalAlpha = 1;
   }
- 
+
   // capture blooms — soft ink flash tracking the reveal wavefront
   for (const a of captureAnims){
     const t = now - a.born;
@@ -1634,7 +1805,7 @@ function render(){
     ctx.fillStyle = grad;
     ctx.beginPath(); ctx.arc(sx, sy, Math.max(4, rad), 0, Math.PI * 2); ctx.fill();
   }
- 
+
   // ink-fleck particles from bigger captures
   if (particles.length){
     for (let i = particles.length - 1; i >= 0; i--){
@@ -1652,13 +1823,36 @@ function render(){
     }
     ctx.globalAlpha = 1;
   }
- 
+
   // hover ghost — dot plus the exact lines it would create.
   // Uses currentPlayer, not HUMAN: the ghost must be the colour of whoever
   // is actually to move, so the previewed connections are the ones that
   // would really form. (The ghost only draws while !locked, so this is
   // always the local player — Red online, or Player 2 in pass-and-play.)
-  if (hover && !locked && switchArmed){
+  if (hover && !locked && armedMode === 'bomb'){
+    // blast preview: the exact squares that would be taken, plus the centre
+    const cx = Math.max(0, Math.min(G.N - 1, hover.x));
+    const cy = Math.max(0, Math.min(G.N - 1, hover.y));
+    const bb = G.blastBounds(cx, cy);
+    const X0 = w2sX(bb.x0 * CELL), Y0 = w2sY(bb.y0 * CELL);
+    const X1 = w2sX((bb.x1 + 1) * CELL), Y1 = w2sY((bb.y1 + 1) * CELL);
+    ctx.save();
+    ctx.fillStyle = `rgba(${COL_RGB[currentPlayer]},0.18)`;
+    ctx.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
+    ctx.strokeStyle = COL[currentPlayer]; ctx.lineWidth = 2;
+    ctx.setLineDash([5, 4]);
+    ctx.strokeRect(X0, Y0, X1 - X0, Y1 - Y0);
+    ctx.setLineDash([]);
+    // centre marker
+    const mx = w2sX((cx + 0.5) * CELL), my = w2sY((cy + 0.5) * CELL);
+    ctx.beginPath(); ctx.arc(mx, my, 4, 0, Math.PI * 2);
+    ctx.fillStyle = COL[currentPlayer]; ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(mx - 8, my); ctx.lineTo(mx + 8, my);
+    ctx.moveTo(mx, my - 8); ctx.lineTo(mx, my + 8);
+    ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.restore();
+  } else if (hover && !locked && armedMode === 'switch'){
     // switch mode: ring the target rather than previewing a placement
     const hx = w2sX(hover.x * CELL), hy = w2sY(hover.y * CELL);
     ctx.save();
@@ -1701,7 +1895,7 @@ function render(){
       ctx.stroke();
     }
   }
- 
+
   // capture floaters
   floaters = floaters.filter(f => now - f.born < 1500);
   for (const f of floaters){
@@ -1714,11 +1908,11 @@ function render(){
     ctx.fillText(f.text, w2sX(f.wx), w2sY(f.wy) - 14 - t * 26);
     ctx.globalAlpha = 1;
   }
- 
+
   ctx.restore();
   return anim || floaters.length > 0 || particles.length > 0 || captureAnims.length > 0;
 }
- 
+
 /* ---------------- minimap ---------------- */
 function updateMinimapBitmap(){
   const N = game.N;
@@ -1747,7 +1941,7 @@ function updateMinimapBitmap(){
   }
   mm.getContext('2d').putImageData(img, 0, 0);
 }
- 
+
 function renderMini(){
   const size = mini.clientWidth || 156;
   const mdpr = Math.min(2, window.devicePixelRatio || 1);
@@ -1769,13 +1963,13 @@ function renderMini(){
   mctx.strokeRect(Math.max(0.7, vx), Math.max(0.7, vy),
                   Math.min(size - 1.4, vw), Math.min(size - 1.4, vh));
 }
- 
+
 /* ---------------- input ---------------- */
 const pointers = new Map();
 let panActive = false, movedDist = 0, pinch0 = null, suppressTap = false;
- 
+
 cv.addEventListener('contextmenu', e => e.preventDefault());
- 
+
 cv.addEventListener('pointerdown', e => {
   ac(); // first gesture unlocks audio
   cv.setPointerCapture(e.pointerId);
@@ -1790,7 +1984,7 @@ cv.addEventListener('pointerdown', e => {
     suppressTap = true;
   }
 });
- 
+
 cv.addEventListener('pointermove', e => {
   const prev = pointers.get(e.pointerId);
   if (prev){
@@ -1818,14 +2012,16 @@ cv.addEventListener('pointermove', e => {
   if (e.pointerType === 'mouse' && pointers.size <= 1){
     const gx = Math.round(s2wX(e.clientX) / CELL);
     const gy = Math.round(s2wY(e.clientY) / CELL);
-    const valid = switchArmed ? game.canSwitch(gx, gy, currentPlayer) : game.canPlace(gx, gy);
+    const valid = armedMode === 'switch' ? game.canSwitch(gx, gy, currentPlayer)
+                : armedMode === 'bomb'   ? true
+                : game.canPlace(gx, gy);
     if (!hover || hover.x !== gx || hover.y !== gy || hover.valid !== valid){
       hover = { x: gx, y: gy, valid };
       dirty = true;
     }
   }
 });
- 
+
 function endPointer(e){
   const wasPan = panActive, wasPinch = suppressTap;
   pointers.delete(e.pointerId);
@@ -1842,7 +2038,7 @@ function endPointer(e){
 cv.addEventListener('pointerup', endPointer);
 cv.addEventListener('pointercancel', endPointer);
 cv.addEventListener('pointerleave', () => { if (hover){ hover = null; dirty = true; } });
- 
+
 cv.addEventListener('wheel', e => {
   e.preventDefault();
   const wx = s2wX(e.clientX), wy = s2wY(e.clientY);
@@ -1851,7 +2047,7 @@ cv.addEventListener('wheel', e => {
   camY = wy - (e.clientY - H / 2) / zoom;
   clampCam(); camTween = null; dirty = true;
 }, { passive: false });
- 
+
 window.addEventListener('keydown', e => {
   // Never steal keys while the user is typing in a field — the pan shortcuts
   // are w/a/s/d, which are also valid room-code characters (and will appear
@@ -1867,7 +2063,7 @@ window.addEventListener('keydown', e => {
   else used = false;
   if (used){ clampCam(); camTween = null; dirty = true; e.preventDefault(); }
 });
- 
+
 /* minimap: click / drag to jump — its own element, never places dots */
 function miniJump(e){
   const r = mini.getBoundingClientRect();
@@ -1881,7 +2077,7 @@ mini.addEventListener('pointerdown', e => { e.stopPropagation(); miniDown = true
 mini.addEventListener('pointermove', e => { if (miniDown) miniJump(e); });
 mini.addEventListener('pointerup',   e => { miniDown = false; });
 mini.addEventListener('pointercancel', () => { miniDown = false; });
- 
+
 // Online, only the host may restart or change board size — otherwise the two
 // peers would silently diverge onto different boards.
 function requestNewGame(){
@@ -1895,10 +2091,10 @@ function requestNewGame(){
 }
 document.getElementById('newBtn').addEventListener('click', requestNewGame);
 sizeSel.addEventListener('change', requestNewGame);
- 
+
 const modeSeg = document.getElementById('modeSeg');
 const diffSeg = document.getElementById('diffSeg');
- 
+
 modeSeg.addEventListener('click', e => {
   const btn = e.target.closest('button[data-mode]');
   if (!btn || btn.classList.contains('active')) return;
@@ -1915,7 +2111,7 @@ modeSeg.addEventListener('click', e => {
   updateWhoLabels();
   newGame();
 });
- 
+
 createBtn.addEventListener('click', createRoom);
 joinBtn.addEventListener('click', joinRoom);
 npSeg.addEventListener('click', e => {
@@ -1924,40 +2120,40 @@ npSeg.addEventListener('click', e => {
   [...npSeg.children].forEach(x => x.classList.toggle('active', x === b));
 });
 joinInput.addEventListener('keydown', e => { if (e.key === 'Enter') joinRoom(); });
- 
+
 diffSeg.addEventListener('click', e => {
   const btn = e.target.closest('button[data-diff]');
   if (!btn || btn.classList.contains('active')) return;
   [...diffSeg.children].forEach(b => b.classList.toggle('active', b === btn));
   aiDifficulty = btn.dataset.diff;
 });
- 
+
 muteBtn.addEventListener('click', () => {
   muted = !muted;
   muteBtn.textContent = muted ? '\u{1F507}' : '\u{1F50A}';
   muteBtn.setAttribute('aria-pressed', String(muted));
   if (!muted) ac();
 });
- 
+
 logBtn.addEventListener('click', () => {
   logPanel.hidden = !logPanel.hidden;
   logBtn.classList.toggle('on', !logPanel.hidden);
   logBtn.setAttribute('aria-pressed', String(!logPanel.hidden));
 });
- 
+
 focusBtn.addEventListener('click', () => {
   autoFocus = !autoFocus;
   focusBtn.classList.toggle('on', autoFocus);
   focusBtn.setAttribute('aria-pressed', String(autoFocus));
   focusBtn.title = `Auto-center on far moves (${autoFocus ? 'on' : 'off'})`;
 });
- 
+
 /* ---------------- main loop ---------------- */
 window.addEventListener('resize', resize);
 resize();
 updateWhoLabels();
 newGame();
- 
+
 function frame(){
   if (camTween){
     const t = Math.min(1, (performance.now() - camTween.t0) / 320);
@@ -1976,7 +2172,7 @@ function frame(){
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
- 
+
 })();
 </script>
 </body>
