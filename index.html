@@ -146,6 +146,16 @@
   #logBtn:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
   #logBtn.on{background:var(--ink);color:#f7f4ea;border-color:var(--ink)}
  
+  #focusBtn{
+    position:absolute;top:12px;right:76px;width:26px;height:26px;border-radius:50%;
+    border:1px solid var(--line);background:#fff;cursor:pointer;font-size:12px;line-height:1;
+    display:flex;align-items:center;justify-content:center;padding:0;color:var(--ink);
+    opacity:.45;
+  }
+  #focusBtn:hover{border-color:rgba(32,38,58,.4)}
+  #focusBtn:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+  #focusBtn.on{background:var(--ink);color:#f7f4ea;border-color:var(--ink);opacity:1}
+ 
   #logPanel{
     position:absolute;top:100%;left:0;margin-top:8px;width:236px;max-height:280px;
     overflow-y:auto;padding:10px 12px;
@@ -165,6 +175,7 @@
     .seg button{font-size:9.5px;padding:5px 2px}
     #muteBtn{width:22px;height:22px;top:9px;right:9px;font-size:10.5px}
     #logBtn{width:22px;height:22px;top:9px;right:37px;font-size:10.5px}
+    #focusBtn{width:22px;height:22px;top:9px;right:65px;font-size:10.5px}
     #logPanel{width:196px}
   }
   @media (prefers-reduced-motion:reduce){
@@ -178,6 +189,7 @@
 <div class="panel" id="hud">
   <button id="muteBtn" aria-label="Mute sound" aria-pressed="false" title="Mute sound">🔊</button>
   <button id="logBtn" aria-label="Capture log" aria-pressed="false" title="Capture log">📜</button>
+  <button id="focusBtn" aria-label="Auto-center on moves" aria-pressed="false" title="Auto-center on far moves (off)">🎯</button>
   <h1>NOK<span>TA</span></h1>
   <div class="sub">grid territory duel</div>
  
@@ -873,6 +885,10 @@ switchBtn.addEventListener('click', () => {
 const pill  = document.getElementById('turnPill');
 const muteBtn = document.getElementById('muteBtn');
 const logBtn = document.getElementById('logBtn');
+const focusBtn = document.getElementById('focusBtn');
+// Off by default: the camera jumping to a far-away opponent move was more
+// disorienting than helpful. Opt in with the 🎯 toggle.
+let autoFocus = false;
 const logPanel = document.getElementById('logPanel');
 const logList = document.getElementById('logList');
 const netBox = document.getElementById('netBox');
@@ -1052,6 +1068,10 @@ function startTurn(pl){
     const label = turnLabel(pl);
     setPill(movesLeft > 1 ? `${label} \u2014 ${movesLeft} moves` : `${label} \u2014 place a dot`, false);
   }
+  // must run AFTER `locked` is set for this turn — updateHUD() above ran while
+  // `locked` still held the previous turn's value, which left the switch
+  // button disabled on the turn right after an opponent's move.
+  updateSwitchBtn();
   dirty = true;
 }
  
@@ -1195,6 +1215,7 @@ function aiTurn(){
 }
  
 function panToIfOffscreen(gx, gy){
+  if (!autoFocus) return;   // single choke point — all callers respect the toggle
   const sx = w2sX(gx * CELL), sy = w2sY(gy * CELL), m = 60;
   if (sx < m || sy < m || sx > W - m || sy > H - m){
     camTween = { x: gx * CELL, y: gy * CELL, from: { x: camX, y: camY }, t0: performance.now() };
@@ -1924,6 +1945,13 @@ logBtn.addEventListener('click', () => {
   logBtn.setAttribute('aria-pressed', String(!logPanel.hidden));
 });
  
+focusBtn.addEventListener('click', () => {
+  autoFocus = !autoFocus;
+  focusBtn.classList.toggle('on', autoFocus);
+  focusBtn.setAttribute('aria-pressed', String(autoFocus));
+  focusBtn.title = `Auto-center on far moves (${autoFocus ? 'on' : 'off'})`;
+});
+ 
 /* ---------------- main loop ---------------- */
 window.addEventListener('resize', resize);
 resize();
@@ -1953,4 +1981,3 @@ requestAnimationFrame(frame);
 </script>
 </body>
 </html>
- 
