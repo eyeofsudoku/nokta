@@ -12,6 +12,10 @@ Deployed at `https://eyeofsudoku.github.io/nokta/` via GitHub Pages.
 
 ## Working conventions (important)
 
+0. **Run `node test/invariants.test.js` after any engine change.** It scans the
+   whole board for illegal squares, open sides and ledger drift after every
+   action, across full simulated games at each AI difficulty for 2 and 3
+   players. It catches exactly the class of bug that reasoning misses.
 1. **Verify empirically, never by eye.** The engine is deterministic and pure.
    Any claim about game behaviour must be demonstrated by a test that runs in
    node — not by reasoning about a screenshot, and not by reading the render
@@ -35,6 +39,31 @@ Deployed at `https://eyeofsudoku.github.io/nokta/` via GitHub Pages.
 - No **orphan lines**: no edge may have unowned ground on *both* sides.
 - No **open sides**: wherever owned ground meets unowned ground, a line must
   exist between them.
+- **Every boundary line belongs to its region's owner.** A line with territory
+  on one side and empty ground on the other must be owned by the player holding
+  that territory; a region fenced partly in someone else's colour is invalid.
+  Measured at 0 across ordinary placement play, so this is a real always-true
+  property. Two things break it, both guarded in `switchDot`: `applyEdges`
+  overwrites a slot unconditionally (slots have a single owner, and
+  `resealBorders`/`bombAt` create borders owned by the ground-holder rather than
+  by dots), and collapsing one player's enclosure can strand another player's
+  territory against a line it does not own — `reownBorders()` fixes exactly
+  those, and only on `territory|empty` seams.
+- **Every square must be fenceable.** Inside a square the four quarters meet at
+  the centre, and the only separators are the two diagonals — of which a square
+  may hold **at most one**, since two would cross. So a square is outlineable in
+  exactly three states:
+    1. all four quarters the same owner,
+    2. split by `dA`: `{N,E}` one owner, `{S,W}` another,
+    3. split by `dB`: `{N,W}` one owner, `{E,S}` another.
+  Across 3 owners (neutral/P1/P2) that is **15 of the 81 combinations — the
+  other 66 cannot be outlined at all**. A square with one, or three, quarters of
+  a given owner is invalid. Any operation writing `owner[]` must leave every
+  touched square legal. A player's holdings must therefore always equal
+  **exactly what their own lines enclose** — release what is no longer fenced in
+  *and* claim what is, or a re-cut square can strand a lone owned quarter. A quarter-carve is not a
+  rendering bug to paper over — the state itself is unrepresentable, and
+  `dAVis()`/`dBVis()` document the assumption it breaks (`N==E`, `S==W`).
 - Replaying the same ordered action stream on a fresh engine must reproduce a
   byte-identical board (this is what makes the netcode work — see below).
 

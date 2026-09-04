@@ -16,6 +16,16 @@ python3 -m http.server 8000
 
 then open <http://localhost:8000>.
 
+## Tests
+
+```sh
+node test/invariants.test.js
+```
+
+DOM-free, no dependencies. Scans the whole board for illegal squares, mixed
+outlines, open sides and ledger drift after every action, across full simulated games at each
+AI difficulty for 2 and 3 players. Run it after any engine change.
+
 ## Layout
 
 ```
@@ -24,7 +34,7 @@ src/engine/       DOM-free game logic — constants, geometry, game, ai
 src/render/       (empty — migration step 3)
 src/net/          (empty — migration step 4)
 src/ui/           (empty — migration step 4)
-test/             (empty — migration step 2)
+test/             engine invariant suite
 ```
 
 `src/engine/` is DOM-free and imports nothing outside `src/engine/`, so it can

@@ -262,19 +262,105 @@ export class Game {
     }
 
     this.dots[idx] = pl;
-    const eds = this.newEdges(x, y, pl);
-    this.applyEdges(eds, pl);
 
+    // The victim's surviving dots may now connect in ways they could not while
+    // the switched dot was theirs — this is what rebuilds the triangle.
+    this.rederiveEdgesAround(x, y, victim);
+    // Never overwrite another player's line. An edge slot has a single owner,
+    // and resealBorders/bombAt create borders owned by whoever holds the
+    // ground rather than by dots — so a slot can already be someone's
+    // territory boundary, and stealing it would fence their region in our
+    // colour. In ordinary placement this cannot arise (both endpoints would
+    // have to be their dots), which is why only the switch path needs it.
+    const eds = this.newEdges(x, y, pl);
+    for (const e of eds){
+      const arr = this._edgeArr(e.t);
+      if (!arr[e.i]) arr[e.i] = pl;
+    }
+
+    // The victim keeps only what their own remaining lines still enclose.
+    const shrunk = this.recomputeHoldings(victim);
+
+    // The switcher captures only if this genuinely closed one of THEIR loops,
+    // so a switch is a disruption tool rather than a land grab.
     let cap = { q: 0, colq: 0 };
     if (eds.length >= 2){
       this.flood(pl);
       cap = this.commitCapture(pl);
-      if (cap.q > 0) this.clearInteriorEdges();
     }
+    this.clearInteriorEdges();
+    this.resealBorders();
+    this.reownBorders();
     this.switchSpent[pl]++;
     this.lastPlaced.push({ x, y, pl, time: (typeof performance !== 'undefined' ? performance.now() : 0) });
     if (this.lastPlaced.length > 12) this.lastPlaced.shift();
-    return { victim, edges: eds.length, gainedQ: cap.q, colQ: cap.colq };
+    return { victim, edges: eds.length, gainedQ: cap.q, colQ: cap.colq, freedQ: shrunk.freed };
+  }
+
+  // Re-derive `who`'s edges around a point whose ownership just changed.
+  //
+  // Edges are DERIVED FROM DOTS, not accumulated state. The engine otherwise
+  // only ever adds an edge when a dot is placed, which is safe while dots are
+  // never removed — but a switch takes a dot out of a player's structure, and
+  // that can make a connection legal that never was before. Closing a 1x1
+  // square leaves both diagonals absent; switch the top-left corner away and
+  // the two surviving corners can finally see each other across the "/"
+  // diagonal, which is what lets the victim keep a triangle instead of an
+  // L-shape enclosing nothing. newEdges enforces the crossing rule, so a
+  // diagonal is never added opposite an existing one.
+  rederiveEdgesAround(x, y, who){
+    for (let dy = -1; dy <= 1; dy++){
+      for (let dx = -1; dx <= 1; dx++){
+        const nx = x + dx, ny = y + dy;
+        if ((dx === 0 && dy === 0) || !this.inP(nx, ny)) continue;
+        if (this.dots[this.pi(nx, ny)] !== who) continue;
+        for (const e of this.newEdges(nx, ny, who)){
+          const arr = this._edgeArr(e.t);
+          if (!arr[e.i]) arr[e.i] = who;
+        }
+      }
+    }
+  }
+
+  // Recompute what `who` holds: their territory becomes EXACTLY what their
+  // remaining lines enclose.
+  //
+  // A switch takes a DOT, not ground. Ground they can no longer fence in goes
+  // neutral — it does NOT transfer to the switcher, who has no loop around it;
+  // handing it over would fence the switcher's new territory with the victim's
+  // lines, and every boundary line of a region must belong to that region's
+  // owner.
+  //
+  // The claim half matters as much as the release half. Re-deriving edges can
+  // legally add a diagonal that re-cuts a square, leaving a quarter enclosed
+  // but unowned — and a lone owned quarter is one of the 66 unfenceable
+  // states. Owning everything enclosed keeps every square legal. Only neutral
+  // ground is claimed: a third party's cells are never colonized by a move
+  // someone else made.
+  //
+  // Released ground stops being anyone's colony, so colQ drops and colFlag
+  // clears — otherwise a later capture of it as NEUTRAL would leave colQ short
+  // of the live truth, since commitCapture only credits colonization when it
+  // takes from a player. colEarnedQ is lifetime and never moves here, so
+  // releasing and retaking cannot farm tokens.
+  recomputeHoldings(who){
+    this.flood(who);
+    const { owner, visited, colFlag } = this;
+    const ep = this.epoch;
+    let freed = 0, kept = 0;
+    for (let c = 0; c < owner.length; c++){
+      const reachable = visited[c] === ep;
+      if (owner[c] === who && reachable){
+        owner[c] = 0; this.scoreQ[who]--;
+        if (colFlag[c]){ this.colQ[who]--; colFlag[c] = 0; }
+        freed++;
+      } else if (owner[c] === 0 && !reachable){
+        owner[c] = who; this.scoreQ[who]++;
+        if (colFlag[c]) this.colQ[who]++;   // keep colQ == live colonized truth
+        kept++;
+      }
+    }
+    return { freed, kept };
   }
 
   /* ---- BOMB: spend BOMB_COST tokens to flatten a square ------------ */
@@ -343,7 +429,53 @@ export class Game {
         else if (right > 0 && left === 0) vE[i] = right;
       }
     }
+    // A square legally split along a diagonal must still carry that diagonal.
+    // Stripping edges through a switched point can take it away and leave the
+    // fill with no separator. Restore it only where the split genuinely exists
+    // and the opposite diagonal is absent, so the crossing rule still holds.
+    for (let s = 0; s < N * N; s++){
+      if (this.dA[s] || this.dB[s]) continue;
+      const b = s * 4, qn = owner[b], qe = owner[b+1], qs = owner[b+2], qw = owner[b+3];
+      if (qn === qe && qs === qw && qn !== qs)      this.dA[s] = qn || qs;  // {N,E}|{S,W}
+      else if (qn === qw && qe === qs && qn !== qe) this.dB[s] = qn || qe;  // {N,W}|{E,S}
+    }
   }
+  // Every boundary line of a region must belong to that region's owner.
+  //
+  // resealBorders only ever ADDS a missing line — deliberately, and there is a
+  // test pinning that contract. But a line can end up owned by the wrong
+  // player without ever going missing: when a switch collapses one player's
+  // enclosure, ground next to ANOTHER player's existing territory turns empty,
+  // and the line already sitting on that seam still belongs to the player who
+  // drew it. Edge slots have a single owner, so the two cannot share it — and
+  // the region's owner is the one that must hold it, exactly as reseal would
+  // have assigned it had the slot been empty.
+  //
+  // Only ever re-owns a line that already exists on a territory|empty seam;
+  // never creates one, never touches a line between two owned regions or two
+  // empty cells (a free construction line stays with whoever drew it).
+  reownBorders(){
+    const { N, P, owner, hE, vE } = this;
+    const fix = (arr, i, a, b) => {
+      const line = arr[i];
+      if (!line) return;
+      if ((a > 0) === (b > 0)) return;
+      const holder = a > 0 ? a : b;
+      if (line !== holder) arr[i] = holder;
+    };
+    for (let sy = 0; sy < N; sy++){
+      for (let sx = 0; sx < N; sx++){
+        const s = sy * N + sx, b = s * 4;
+        fix(hE, sy * P + sx, owner[b + 0], sy > 0 ? owner[((sy - 1) * N + sx) * 4 + 2] : 0);
+        fix(vE, sy * P + sx, owner[b + 3], sx > 0 ? owner[(sy * N + sx - 1) * 4 + 1] : 0);
+        if (sy === N - 1) fix(hE, (sy + 1) * P + sx, owner[b + 2], 0);
+        if (sx === N - 1) fix(vE, sy * P + sx + 1, owner[b + 1], 0);
+        fix(this.dA, s, owner[b + 0], owner[b + 2]);   // {N,E} | {S,W}
+        fix(this.dB, s, owner[b + 0], owner[b + 1]);   // {N,W} | {E,S}
+      }
+    }
+  }
+
   killEdgesAround(c){
     const N = this.N, P = this.P, t = c & 3, s = c >> 2, sx = s % N, sy = (s / N) | 0;
     if (t === 0){ this.hE[sy * P + sx] = 0; this.dB[s] = 0; this.dA[s] = 0; }
