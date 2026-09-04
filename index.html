@@ -115,6 +115,14 @@
   #bombBtn.armed{background:var(--red);color:#fff;border-color:var(--red)}
   #bombBtn:disabled{opacity:.45;cursor:default}
 
+  #laserBtn{
+    width:100%;margin-top:5px;font-size:11.5px;font-weight:700;
+    background:#fff;color:var(--ink);border:1px solid var(--line);
+  }
+  #laserBtn:hover:not(:disabled){border-color:rgba(32,38,58,.4)}
+  #laserBtn.armed{background:var(--blue);color:#fff;border-color:var(--blue)}
+  #laserBtn:disabled{opacity:.45;cursor:default}
+
   #netBox{margin-top:9px;padding:9px 10px;border-radius:9px;background:rgba(32,38,58,.06)}
   #netBox.isHidden{display:none}
   #netStatus{font-size:11px;font-weight:600;color:var(--ink-soft);margin-bottom:7px}
@@ -225,6 +233,7 @@
   <div id="turnPill">Your turn — place a dot</div>
   <button type="button" id="switchBtn" hidden>⇄ Switch a dot</button>
   <button type="button" id="bombBtn" hidden>💥 Drop a bomb</button>
+  <button type="button" id="laserBtn" hidden>─ Fire a laser</button>
 
   <div class="seg" id="modeSeg" role="group" aria-label="Game mode">
     <button type="button" data-mode="ai" class="active">Vs AI</button>
@@ -285,7 +294,7 @@
 /* Engine lives in src/engine/ — DOM-free and independently testable.
    ES modules need a real server: `python3 -m http.server 8000`.
    The UI below is unchanged and reads these via module scope. */
-import { HUMAN, AIP, GREEN } from './src/engine/constants.js';
+import { HUMAN, AIP, GREEN, LASER_COST } from './src/engine/constants.js';
 import { Game } from './src/engine/game.js';
 import { chooseAIMove } from './src/engine/ai.js';
 
@@ -341,7 +350,12 @@ const rowGreen = document.getElementById('rowGreen');
 const nameIn = { 1: whoBlue, 2: whoRed, 3: whoGreen };
 const switchBtn = document.getElementById('switchBtn');
 const bombBtn = document.getElementById('bombBtn');
-let armedMode = null;              // null | 'switch' | 'bomb'
+const laserBtn = document.getElementById('laserBtn');
+let armedMode = null;              // null | 'switch' | 'bomb' | 'laser'
+// Aim for the laser, an index into LASER_DIRS (0-7, E..NE). Kept across shots
+// so repeat fire in the same direction needs no re-aiming. R rotates it.
+let laserDir = 0;
+const LASER_ARROWS = ['\u2192','\u2198','\u2193','\u2199','\u2190','\u2196','\u2191','\u2197'];
 let gameOver = false;
 
 // Kept as a getter so the existing render/hover code reads naturally.
@@ -368,6 +382,17 @@ function updateSwitchBtn(){
     ? `\u{1F4A5} Pick the blast centre (${bombs})`
     : `\u{1F4A5} Drop a bomb (${bombs})`;
 
+  // Online laser needs the 'l' message, which lands in the netcode commit;
+  // until then it stays a local-modes ability rather than silently desyncing.
+  const lasers = Math.floor(tokens / LASER_COST);
+  const laserOk = mode !== 'online';
+  laserBtn.hidden = !(mine && !gameOver && lasers > 0 && laserOk);
+  laserBtn.disabled = !(live && lasers > 0 && laserOk);
+  laserBtn.classList.toggle('armed', armedMode === 'laser');
+  laserBtn.textContent = armedMode === 'laser'
+    ? `${LASER_ARROWS[laserDir]} Aim · R rotates (${lasers})`
+    : `─ Fire a laser (${lasers})`;
+
   if (!live && armedMode) armedMode = null;
 }
 
@@ -377,6 +402,10 @@ switchBtn.addEventListener('click', () => {
 });
 bombBtn.addEventListener('click', () => {
   armedMode = armedMode === 'bomb' ? null : 'bomb';
+  updateSwitchBtn(); dirty = true;
+});
+laserBtn.addEventListener('click', () => {
+  armedMode = armedMode === 'laser' ? null : 'laser';
   updateSwitchBtn(); dirty = true;
 });
 const pill  = document.getElementById('turnPill');
@@ -650,6 +679,15 @@ function doBomb(cx, cy, pl){
   return true;
 }
 
+function doLaser(gx, gy, dir, pl){
+  const before = game.owner.slice();
+  const r = game.laserAt(gx, gy, dir, pl);
+  if (!r) return false;               // dead ray: nothing spent, stay armed
+  armedMode = null;
+  afterPlace(gx, gy, pl, { gainedQ: r.gainedQ, colQ: r.colQ }, before);
+  advanceTurn(pl);
+  return true;
+}
 function doSwitch(gx, gy, pl){
   if (!game.canSwitch(gx, gy, pl)) return false;
   const before = game.owner.slice();
@@ -699,6 +737,14 @@ function onBoardClick(gx, gy){
     const cy = Math.max(0, Math.min(game.N - 1, gy));
     if (!doBomb(cx, cy, pl)) return;
     if (mode === 'online') netSend({ t: 'b', x: cx, y: cy, pl });
+    return;
+  }
+  if (armedMode === 'laser'){
+    if (mode === 'online' && (!net.connected || currentPlayer !== net.myPl)) return;
+    const pl = currentPlayer;
+    // A ray that would land nothing is refused by the engine; stay armed so
+    // the player can re-aim rather than silently losing the click.
+    if (!doLaser(gx, gy, laserDir, pl)) return;
     return;
   }
   if (!game.canPlace(gx, gy)) return;
@@ -1220,6 +1266,50 @@ function render(){
     ctx.moveTo(mx, my - 8); ctx.lineTo(mx, my + 8);
     ctx.lineWidth = 1.4; ctx.stroke();
     ctx.restore();
+  } else if (hover && !locked && armedMode === 'laser'){
+    // Everything drawn here comes from laserPreview, so the ghost and the shot
+    // cannot drift apart: solid dots land, ringed crosses are skipped, and a
+    // muted x on a segment means no line will form across it — which is how a
+    // blocked opponent dot, and a 45° run refused by the crossing rule, both
+    // read as the real gaps they are.
+    const pv = G.laserPreview(hover.x, hover.y, laserDir, currentPlayer);
+    ctx.save();
+    for (let i = 0; i + 1 < pv.positions.length; i++){
+      const a = pv.positions[i], b = pv.positions[i + 1];
+      const ax = w2sX(a.x * CELL), ay = w2sY(a.y * CELL);
+      const bx = w2sX(b.x * CELL), by = w2sY(b.y * CELL);
+      if (pv.links[i]){
+        ctx.strokeStyle = COL[currentPlayer]; ctx.globalAlpha = 0.55;
+        ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        const mx = (ax + bx) / 2, my = (ay + by) / 2;
+        ctx.strokeStyle = 'rgba(32,38,58,.5)'; ctx.globalAlpha = 1;
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(mx - 3.5, my - 3.5); ctx.lineTo(mx + 3.5, my + 3.5);
+        ctx.moveTo(mx + 3.5, my - 3.5); ctx.lineTo(mx - 3.5, my + 3.5);
+        ctx.stroke();
+      }
+    }
+    for (const p of pv.positions){
+      const px = w2sX(p.x * CELL), py = w2sY(p.y * CELL);
+      ctx.beginPath(); ctx.arc(px, py, dotR, 0, Math.PI * 2);
+      if (p.willLand){
+        ctx.globalAlpha = 0.6; ctx.fillStyle = COL[currentPlayer]; ctx.fill();
+      } else {
+        ctx.globalAlpha = 1; ctx.lineWidth = 1.4;
+        ctx.strokeStyle = 'rgba(32,38,58,.4)'; ctx.stroke();
+      }
+    }
+    // the anchor: this is where the ray starts, not its centre
+    ctx.globalAlpha = 1; ctx.lineWidth = 2;
+    ctx.strokeStyle = pv.ok ? COL[currentPlayer] : 'rgba(32,38,58,.35)';
+    ctx.beginPath();
+    ctx.arc(w2sX(hover.x * CELL), w2sY(hover.y * CELL), dotR + 4, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
   } else if (hover && !locked && armedMode === 'switch'){
     // switch mode: ring the target rather than previewing a placement
     const hx = w2sX(hover.x * CELL), hy = w2sY(hover.y * CELL);
@@ -1382,6 +1472,7 @@ cv.addEventListener('pointermove', e => {
     const gy = Math.round(s2wY(e.clientY) / CELL);
     const valid = armedMode === 'switch' ? game.canSwitch(gx, gy, currentPlayer)
                 : armedMode === 'bomb'   ? true
+                : armedMode === 'laser'  ? game.laserPreview(gx, gy, laserDir, currentPlayer).ok
                 : game.canPlace(gx, gy);
     if (!hover || hover.x !== gx || hover.y !== gy || hover.valid !== valid){
       hover = { x: gx, y: gy, valid };
@@ -1422,6 +1513,14 @@ window.addEventListener('keydown', e => {
   // in nicknames), so without this guard those letters can't be typed at all.
   const t = e.target;
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+  if (e.key === 'Escape' && armedMode){
+    armedMode = null; updateSwitchBtn(); dirty = true; e.preventDefault(); return;
+  }
+  if ((e.key === 'r' || e.key === 'R') && armedMode === 'laser'){
+    laserDir = (laserDir + 1) & 7;   // 8 directions: the anchor is the ray's
+    updateSwitchBtn(); dirty = true; // START, so E and W are different shots
+    e.preventDefault(); return;
+  }
   const step = 90 / zoom;
   let used = true;
   if (e.key === 'ArrowLeft' || e.key === 'a') camX -= step;
