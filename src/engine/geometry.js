@@ -85,3 +85,13 @@ export function cellNeighbours(N, c, out){
   else if (t === 2){ if (sy < N - 1) out.push(((sy + 1) * N + sx) * 4 + 0); }
   else             { if (sx > 0)     out.push((sy * N + sx - 1) * 4 + 1); }
 }
+
+// Laser directions, index 0-7: E, SE, S, SW, W, NW, N, NE (screen coords, y
+// grows down). The anchor is the START of the ray, not its centre, so the two
+// senses of each axis are genuinely different rays — a line is symmetric at
+// 180° only when centred. All 8 are distinct and the index travels over the
+// wire, so this order is part of the protocol: do not reorder it.
+export const LASER_DIRS = [
+  [ 1,  0], [ 1,  1], [ 0,  1], [-1,  1],
+  [-1,  0], [-1, -1], [ 0, -1], [ 1, -1],
+];

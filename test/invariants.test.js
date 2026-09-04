@@ -1,6 +1,8 @@
 /* Engine invariants. DOM-free, no dependencies.
    Run: node test/invariants.test.js                                        */
 import { Game } from '../src/engine/game.js';
+import { LASER_LEN, LASER_COST } from '../src/engine/constants.js';
+import { LASER_DIRS } from '../src/engine/geometry.js';
 import { chooseAIMove } from '../src/engine/ai.js';
 
 let passed = 0, failed = 0;
@@ -309,6 +311,157 @@ test('replaying one action stream on fresh engines is byte-identical', () => {
     for (const [t,x,y,pl] of actions) G.place(x, y, pl);
     assert(snapshot(G) === first, 'replay ' + rep + ' diverged');
   }
+});
+
+/* ---- laser ---------------------------------------------------------- */
+
+// owner of the edge slot between two ADJACENT lattice points, or 0
+function edgeBetween(G, ax, ay, bx, by){
+  const N = G.N, P = G.P, dx = bx - ax, dy = by - ay;
+  if (dy === 0) return G.hE[ay * P + Math.min(ax, bx)];
+  if (dx === 0) return G.vE[Math.min(ay, by) * P + ax];
+  const sx = Math.min(ax, bx), sy = Math.min(ay, by);
+  return dx === dy ? G.dA[sy * N + sx] : G.dB[sy * N + sx];
+}
+function armed(G, pl){ G.colEarnedQ[pl] = 4000; return G; }
+
+test('laser: a clear ray lands exactly LASER_LEN dots', () => {
+  const G = armed(new Game(20, 2), 1);
+  const r = G.laserAt(2, 2, 0, 1);            // dir 0 = E
+  assert(r, 'laser should fire');
+  assert(r.landed === LASER_LEN, `expected ${LASER_LEN} dots, got ${r.landed}`);
+  for (let i = 0; i < LASER_LEN; i++)
+    assert(G.dots[G.pi(2 + i, 2)] === 1, `no dot at (${2+i},2)`);
+  assert(G.switchesFor(1) === Math.floor(4000/40) - LASER_COST, 'wrong token spend');
+});
+
+test("laser: an opponent's dot is skipped and breaks the line", () => {
+  const G = armed(new Game(20, 2), 1);
+  G.place(7, 2, 2);                            // enemy dot mid-path
+  const r = G.laserAt(2, 2, 0, 1);
+  assert(r.landed === LASER_LEN - 1, `expected ${LASER_LEN-1}, got ${r.landed}`);
+  assert(G.dots[G.pi(7, 2)] === 2, 'the enemy dot must survive');
+  // the two dots either side are 2 apart: no edge of ours spans the gap
+  assert(edgeBetween(G, 6, 2, 7, 2) !== 1, 'edge formed into the enemy dot');
+  assert(edgeBetween(G, 7, 2, 8, 2) !== 1, 'edge formed out of the enemy dot');
+});
+
+test('laser: your own dot is skipped but the line stays continuous', () => {
+  const G = armed(new Game(20, 2), 1);
+  G.place(7, 2, 1);                            // our own dot mid-path
+  const r = G.laserAt(2, 2, 0, 1);
+  assert(r.landed === LASER_LEN - 1, `expected ${LASER_LEN-1}, got ${r.landed}`);
+  assert(edgeBetween(G, 6, 2, 7, 2) === 1, 'line broke before our own dot');
+  assert(edgeBetween(G, 7, 2, 8, 2) === 1, 'line broke after our own dot');
+});
+
+test('laser: a fully blocked ray is refused, spending nothing', () => {
+  const G = armed(new Game(20, 2), 1);
+  for (let i = 0; i < LASER_LEN; i++) G.place(2 + i, 2, 2);
+  const tokensBefore = G.switchesFor(1), spentBefore = G.switchSpent[1];
+  const r = G.laserAt(2, 2, 0, 1);
+  assert(r === null, 'a dead ray must be refused, got ' + JSON.stringify(r));
+  assert(G.switchesFor(1) === tokensBefore, 'tokens were spent on a dead ray');
+  assert(G.switchSpent[1] === spentBefore, 'switchSpent moved on a dead ray');
+});
+
+test('laser: a 45° dot lands but its connection is refused by the crossing rule', () => {
+  const G = armed(new Game(20, 2), 1);
+  G.place(3, 3, 2); G.place(4, 4, 2);          // red owns dA of square (3,3)
+  assert(G.dA[3 * G.N + 3] === 2, 'setup: red dA should exist');
+  const pre = G.laserPreview(4, 3, 3, 1);      // dir 3 = SW, crosses square (3,3)
+  const r = G.laserAt(4, 3, 3, 1);
+  assert(G.dots[G.pi(4, 3)] === 1 && G.dots[G.pi(3, 4)] === 1, 'both dots should land');
+  assert(G.dB[3 * G.N + 3] === 0, 'the crossing diagonal must be refused');
+  assert(pre.links[0] === false, 'preview must predict the refused connection');
+  assert(G.dA[3 * G.N + 3] === 2, "red's diagonal must survive");
+});
+
+test('laser: closing a loop captures once, with the whole area', () => {
+  const G = armed(new Game(20, 2), 1);
+  // four collinear dots enclose nothing on their own — no corner dots, or the
+  // diagonals they form with the row would close triangles before we fire
+  for (const [x,y] of [[2,3],[3,3],[4,3],[5,3]]) G.place(x, y, 1);
+  assert(G.scoreQ[1] === 0, 'setup should enclose nothing yet');
+
+  const before = G.scoreQ[1];
+  const r = G.laserAt(2, 2, 0, 1);          // parallel row above closes it
+  const delta = G.scoreQ[1] - before;
+
+  // one commitCapture for the whole line: the reported figure must equal the
+  // real total. Capturing per dot would report only the last dot's share.
+  assert(r.gainedQ === delta, `reported ${r.gainedQ} but board gained ${delta}`);
+  // 3 whole squares (12 quarters) between the rows, plus a half-square: the
+  // laser dot at (6,2) runs past the row's end and connects diagonally down to
+  // (5,3), fencing the {N,W} triangle of square (5,2). 14 quarters, area 3.5.
+  assert(r.gainedQ === 14, `expected 14 quarters, got ${r.gainedQ}`);
+  assert(G.area(1) === 3.5, `expected area 3.5, got ${G.area(1)}`);
+  const b = (2 * G.N + 5) * 4;
+  assert(G.owner[b] === 1 && G.owner[b+3] === 1 && G.owner[b+1] === 0 && G.owner[b+2] === 0,
+         'square (5,2) should be the {N,W} half only');
+});
+
+test('laser: laserPreview matches laserAt in all 8 directions', () => {
+  for (let dir = 0; dir < 8; dir++){
+    const G = armed(new Game(20, 3), 1);
+    // mixed obstacles: our dots, enemy dots, and an enemy diagonal
+    for (const [x,y] of [[9,9],[11,11],[6,12],[12,6]]) G.place(x, y, 2);
+    for (const [x,y] of [[8,10],[10,8]]) G.place(x, y, 3);
+    for (const [x,y] of [[13,13],[14,14]]) G.place(x, y, 1);
+    const pre = G.laserPreview(10, 10, dir, 1);
+    const G2 = G.clone();
+    const r = G2.laserAt(10, 10, dir, 1);
+    assert(pre.ok === (r !== null), `dir ${dir}: ok=${pre.ok} but laserAt gave ${r}`);
+    if (!r) continue;
+    const landed = pre.positions.filter(p => p.willLand);
+    assert(landed.length === r.landed, `dir ${dir}: preview ${landed.length} vs actual ${r.landed}`);
+    landed.forEach((p, i) => {
+      assert(p.x === r.positions[i].x && p.y === r.positions[i].y,
+             `dir ${dir}: position ${i} differs`);
+    });
+    for (let i = 0; i + 1 < pre.positions.length; i++){
+      const a = pre.positions[i], b = pre.positions[i + 1];
+      const real = edgeBetween(G2, a.x, a.y, b.x, b.y) === 1;
+      assert(pre.links[i] === real,
+             `dir ${dir}: link ${i} (${a.x},${a.y})-(${b.x},${b.y}) preview=${pre.links[i]} real=${real}`);
+    }
+  }
+});
+
+test('laser: every invariant holds after firing, 2p and 3p', () => {
+  for (let seed = 1; seed <= 12; seed++){
+    const np = (seed % 2) ? 2 : 3;
+    const G = new Game(16, np), rnd = rndFrom(seed * 4099);
+    let pl = 1;
+    for (const [x,y] of [[3,3],[4,3],[3,4],[8,8],[9,8],[8,9]]) { G.place(x,y,pl); pl = G.nextOf(pl); }
+    for (let i = 0; i < 60; i++){
+      for (let p = 1; p <= np; p++) G.colEarnedQ[p] = Math.max(G.colEarnedQ[p], 3000);
+      if (i % 4 === 3) G.laserAt((rnd()*G.P)|0, (rnd()*G.P)|0, (rnd()*8)|0, pl);
+      else { const m = chooseAIMove(G, rnd, 'medium'); if (m) G.place(m.x, m.y, pl); }
+      const ill = illegalSquares(G), mix = mixedOutlines(G), led = ledger(G), os = openSides(G);
+      assert(ill.length === 0, `seed ${seed} step ${i}: illegal ${ill.slice(0,3)}`);
+      assert(mix.length === 0, `seed ${seed} step ${i}: mixed ${mix.slice(0,3)}`);
+      assert(led.length === 0, `seed ${seed} step ${i}: ${led.join('; ')}`);
+      assert(os.length === 0,  `seed ${seed} step ${i}: open sides ${os.slice(0,3)}`);
+      assert(crossings(G) === 0, `seed ${seed} step ${i}: crossings`);
+      pl = G.nextOf(pl);
+    }
+  }
+});
+
+test('laser: an identical action stream replays byte-identically', () => {
+  const acts = [];
+  const rnd = rndFrom(2024);
+  for (let i = 0; i < 40; i++)
+    acts.push([(rnd()*15)|0, (rnd()*15)|0, (rnd()*8)|0, (i % 2) + 1]);
+  const build = () => {
+    const G = new Game(14, 2);
+    for (const [x,y,d,pl] of acts){ G.colEarnedQ[pl] = 8000; G.laserAt(x, y, d, pl); }
+    return snapshot(G);
+  };
+  const first = build();
+  assert(build() === first, 'replay 1 diverged');
+  assert(build() === first, 'replay 2 diverged');
 });
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

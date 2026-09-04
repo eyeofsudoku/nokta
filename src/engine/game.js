@@ -16,10 +16,11 @@
    ================================================================ */
 'use strict';
 
-import { COL_PER_SWITCH, COL_PER_MOVE, BOMB_COST, BOMB_SIZE } from './constants.js';
+import { COL_PER_SWITCH, COL_PER_MOVE, BOMB_COST, BOMB_SIZE,
+         LASER_LEN, LASER_COST } from './constants.js';
 import {
   pi, inP, inS, incidentCells, incidentEdges,
-  blastBounds, inBlast, cellNeighbours
+  blastBounds, inBlast, cellNeighbours, LASER_DIRS
 } from './geometry.js';
 
 export class Game {
@@ -567,6 +568,96 @@ export class Game {
     this.lastPlaced.push({ x: cx, y: cy, pl, time: (typeof performance !== 'undefined' ? performance.now() : 0) });
     if (this.lastPlaced.length > 12) this.lastPlaced.shift();
     return { gainedQ: gained, colQ: colq, dissolvedQ: dissolved, bounds: b };
+  }
+
+  /* ---- LASER: spend LASER_COST tokens to draw a line of dots -------- */
+  // The ray is LASER_LEN POSITIONS long starting AT (x,y) — not LASER_LEN dots.
+  // A blocked position gets no dot and the ray continues past it; it does not
+  // extend further to compensate, so fewer than LASER_LEN dots may land. That
+  // is the whole strategic point: blocking a laser path is a real defensive
+  // move, because the two dots either side of a skip are 2 apart and no edge
+  // forms between them.
+  laserRay(x, y, dir){
+    const out = [];
+    if (!Number.isInteger(dir) || dir < 0 || dir > 7 || !this.inP(x, y)) return out;
+    const [dx, dy] = LASER_DIRS[dir];
+    for (let i = 0; i < LASER_LEN; i++){
+      const px = x + dx * i, py = y + dy * i;
+      if (!this.inP(px, py)) break;   // a straight ray never re-enters the board
+      out.push({ x: px, y: py, willLand: this.canPlace(px, py) });
+    }
+    return out;
+  }
+
+  // Would an edge of pl exist between the adjacent points a and b once the ray
+  // has been fired? Mirrors newEdges + applyEdges: both ends must hold pl's
+  // dot, the slot must be free or already pl's, and a diagonal is refused if
+  // the opposite diagonal of that square exists.
+  _wouldConnect(ax, ay, bx, by, pl, landing){
+    const N = this.N, P = this.P;
+    const has = (px, py) => this.dots[py * P + px] === pl || landing.has(py * P + px);
+    if (!has(ax, ay) || !has(bx, by)) return false;
+    const dx = bx - ax, dy = by - ay;
+    let arr, i, opp = null;
+    if (dy === 0)      { arr = this.hE; i = ay * P + Math.min(ax, bx); }
+    else if (dx === 0) { arr = this.vE; i = Math.min(ay, by) * P + ax; }
+    else {
+      // the square the diagonal cuts, and the diagonal that would cross it
+      const sx = Math.min(ax, bx), sy = Math.min(ay, by);
+      if (!inS(N, sx, sy)) return false;
+      if (dx === dy) { arr = this.dA; i = sy * N + sx; opp = this.dB[i]; }   // "\"
+      else           { arr = this.dB; i = sy * N + sx; opp = this.dA[i]; }   // "/"
+    }
+    if (opp) return false;
+    return !arr[i] || arr[i] === pl;
+  }
+
+  // Non-mutating prediction the ghost renders from. `ok` is true exactly when
+  // laserAt would succeed, and `links[i]` says whether positions i and i+1 end
+  // up joined — so a skipped opponent dot shows as a real gap, while a skipped
+  // dot of your own still reads as a continuous run.
+  laserPreview(x, y, dir, pl){
+    const positions = this.laserRay(x, y, dir);
+    const landing = new Set();
+    for (const p of positions) if (p.willLand) landing.add(p.y * this.P + p.x);
+    const links = [];
+    for (let i = 0; i + 1 < positions.length; i++){
+      const a = positions[i], b = positions[i + 1];
+      links.push(this._wouldConnect(a.x, a.y, b.x, b.y, pl, landing));
+    }
+    const landed = landing.size;
+    return { positions, links, landed, ok: landed > 0 && this.canLaser(pl) };
+  }
+
+  canLaser(pl){ return this.switchesFor(pl) >= LASER_COST; }
+
+  laserAt(x, y, dir, pl){
+    if (!this.canLaser(pl)) return null;
+    const ray = this.laserRay(x, y, dir);
+    const positions = ray.filter(p => p.willLand).map(p => ({ x: p.x, y: p.y }));
+    if (!positions.length) return null;   // never spend a token on a dead ray
+
+    // Apply as we go: that is what lets consecutive laser dots connect to each
+    // other, since newEdges only sees dots that already exist.
+    for (const p of positions){
+      this.dots[this.pi(p.x, p.y)] = pl;
+      this.dotList.push({ x: p.x, y: p.y });
+      this.applyEdges(this.newEdges(p.x, p.y, pl), pl);
+    }
+
+    // One capture pass for the whole line, not one per dot.
+    this.flood(pl);
+    const cap = this.commitCapture(pl);
+    if (cap.q > 0) this.clearInteriorEdges();
+    this.reownBorders();
+
+    this.switchSpent[pl] += LASER_COST;
+    const t = (typeof performance !== 'undefined' ? performance.now() : 0);
+    for (const p of positions){
+      this.lastPlaced.push({ x: p.x, y: p.y, pl, time: t });
+      if (this.lastPlaced.length > 12) this.lastPlaced.shift();
+    }
+    return { landed: positions.length, gainedQ: cap.q, colQ: cap.colq, positions };
   }
 
   /* ---- the single mutation API (human and AI both use this) ------ */
