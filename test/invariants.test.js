@@ -201,6 +201,64 @@ test('colEarnedQ is monotonic and no double credit on retaken ground', () => {
   }
 });
 
+test('applyEdges never overwrites another player\'s slot, and revert is symmetric', () => {
+  const G = new Game(8, 2);
+  // p1 owns a line whose lattice points carry no dots — exactly what
+  // resealBorders and bombAt produce, and the reason the slot is free to
+  // build on. p2 then forms a connection across the same slot.
+  G.hE[3 * G.P + 3] = 1;
+  G.place(3, 3, 2); G.place(4, 3, 2);
+  assert(G.hE[3 * G.P + 3] === 1,
+         'p2 stole p1\'s slot, owner=' + G.hE[3 * G.P + 3]);
+
+  // revertEdges must undo only what applyEdges actually wrote
+  const G2 = new Game(8, 2);
+  G2.vE[2 * G2.P + 2] = 1;
+  const applied = G2.applyEdges([{ t: 1, i: 2 * G2.P + 2 }, { t: 0, i: 2 * G2.P + 2 }], 2);
+  assert(applied.length === 1, 'only the free slot should be written, got ' + applied.length);
+  G2.revertEdges(applied);
+  assert(G2.vE[2 * G2.P + 2] === 1, "revert zeroed a slot it never owned");
+  assert(G2.hE[2 * G2.P + 2] === 0, 'revert failed to undo its own write');
+});
+
+test('REGRESSION — a placed dot never steals another player\'s border line', () => {
+  // seed 3: three bombs land, then at step 57 p3 places a dot at (3,9) whose
+  // auto-connection lands on hE(3,9) — a slot already owned by p1 as the
+  // border of territory p1 wholly owns. It is reachable only after a bomb,
+  // because bomb/reseal borders are owned by the GROUND holder rather than
+  // derived from dots, so both lattice points sit empty and free to build on.
+  // applyEdges used to overwrite it unconditionally, fencing p1's region in
+  // p3's colour — and since applyEdges runs before flood(), the stolen slot
+  // was a live barrier in the capture that followed.
+  const G = new Game(12, 3), rnd = rndFrom(3 * 7919);
+  let pl = 1, checked = false;
+  for (const [x,y] of [[3,3],[4,3],[3,4],[7,7],[8,7],[7,8],[5,9],[9,5]]){ G.place(x,y,pl); pl = G.nextOf(pl); }
+  for (let i = 0; i < 160; i++){
+    for (let p = 1; p <= 3; p++) G.colEarnedQ[p] = Math.max(G.colEarnedQ[p], 2000);
+    let did = false;
+    if (i % 19 === 18 && G.bombsFor(pl) > 0){ G.bombAt((rnd()*G.N)|0, (rnd()*G.N)|0, pl); did = true; }
+    if (!did){
+      const m = chooseAIMove(G, rnd, 'medium');
+      if (m){
+        G.place(m.x, m.y, pl);
+        if (i === 57){
+          assert(m.x === 3 && m.y === 9 && pl === 3, `scenario drifted: step 57 was p${pl} at (${m.x},${m.y})`);
+          const b = (9 * 12 + 3) * 4;
+          assert(G.owner[b] === 1 && G.owner[b+1] === 1 && G.owner[b+2] === 1 && G.owner[b+3] === 1,
+                 'square (3,9) should be wholly p1');
+          assert(G.hE[9 * G.P + 3] === 1,
+                 'p3 stole p1\'s border line hE(3,9), owner=' + G.hE[9 * G.P + 3]);
+          checked = true;
+        }
+      }
+    }
+    const mix = mixedOutlines(G);
+    assert(mix.length === 0, `step ${i}: mixed outlines ${mix.slice(0,3)}`);
+    pl = G.nextOf(pl);
+  }
+  assert(checked, 'step 57 never ran — scenario drifted');
+});
+
 test('full simulated games keep every invariant, all difficulties, 2p and 3p', () => {
   for (let seed = 1; seed <= 24; seed++){
     const np = (seed % 3 === 0) ? 3 : 2;

@@ -118,7 +118,25 @@ export class Game {
   }
 
   _edgeArr(t){ return t === 0 ? this.hE : t === 1 ? this.vE : t === 2 ? this.dA : this.dB; }
-  applyEdges(list, pl){ for (const e of list) this._edgeArr(e.t)[e.i] = pl; }
+  // Never overwrite another player's line. An edge slot has a single owner, and
+  // resealBorders/bombAt create borders owned by whoever holds the GROUND
+  // rather than derived from dots — so a slot can already be someone's
+  // territory boundary while both its lattice points sit empty, free for
+  // another player to build on. Stealing it fences their region in our colour,
+  // and because applyEdges runs BEFORE flood(), a stolen slot would also be a
+  // live barrier in the very capture that follows.
+  //
+  // Returns the edges actually written, so revertEdges can undo exactly those
+  // — reverting the full requested list would zero a slot we never owned.
+  applyEdges(list, pl){
+    const applied = [];
+    for (const e of list){
+      const arr = this._edgeArr(e.t);
+      if (arr[e.i] && arr[e.i] !== pl) continue;
+      arr[e.i] = pl; applied.push(e);
+    }
+    return applied;
+  }
   revertEdges(list){ for (const e of list) this._edgeArr(e.t)[e.i] = 0; }
 
   /* ---- planar face detection: flood from outside ----------------- */
@@ -266,17 +284,8 @@ export class Game {
     // The victim's surviving dots may now connect in ways they could not while
     // the switched dot was theirs — this is what rebuilds the triangle.
     this.rederiveEdgesAround(x, y, victim);
-    // Never overwrite another player's line. An edge slot has a single owner,
-    // and resealBorders/bombAt create borders owned by whoever holds the
-    // ground rather than by dots — so a slot can already be someone's
-    // territory boundary, and stealing it would fence their region in our
-    // colour. In ordinary placement this cannot arise (both endpoints would
-    // have to be their dots), which is why only the switch path needs it.
     const eds = this.newEdges(x, y, pl);
-    for (const e of eds){
-      const arr = this._edgeArr(e.t);
-      if (!arr[e.i]) arr[e.i] = pl;
-    }
+    this.applyEdges(eds, pl);
 
     // The victim keeps only what their own remaining lines still enclose.
     const shrunk = this.recomputeHoldings(victim);
@@ -575,6 +584,11 @@ export class Game {
       cap = this.commitCapture(pl);
       if (cap.q > 0) this.clearInteriorEdges();
     }
+    // Safety net. The applyEdges guard prevents the switcher/placer from
+    // STEALING a boundary, but a capture can still strand one: commitCapture
+    // claims ground next to a line another player drew, leaving their line
+    // fencing our region. Prevention cannot reach that case, so repair it.
+    this.reownBorders();
     this.lastPlaced.push({ x, y, pl, time: (typeof performance !== 'undefined' ? performance.now() : 0) });
     if (this.lastPlaced.length > 12) this.lastPlaced.shift();
     return { edges: eds.length, gainedQ: cap.q, colQ: cap.colq };
@@ -587,11 +601,11 @@ export class Game {
     const eds = this.newEdges(x, y, pl);
     const res = { q: 0, colq: 0, edges: eds.length };
     if (eds.length >= 2){
-      this.applyEdges(eds, pl);
+      const applied = this.applyEdges(eds, pl);
       this.flood(pl);
       const r = this.countCapture(pl);
       res.q = r.q; res.colq = r.colq;
-      this.revertEdges(eds);
+      this.revertEdges(applied);
     }
     this.dots[idx] = 0;
     return res;

@@ -16,16 +16,23 @@ Deployed at `https://eyeofsudoku.github.io/nokta/` via GitHub Pages.
    whole board for illegal squares, open sides and ledger drift after every
    action, across full simulated games at each AI difficulty for 2 and 3
    players. It catches exactly the class of bug that reasoning misses.
-1. **Verify empirically, never by eye.** The engine is deterministic and pure.
+1. **Invariant metrics count DISTINCT violations, never per-step sums.** A
+   harness that adds the violation count after every action multiplies one
+   long-lived violation by however many steps it survives. That is how a stress
+   run once reported "230 mixed outlines" for what were **9** distinct ones,
+   never more than 2 on the board at once — a 25x inflation that also pointed
+   the blame at the wrong operation. Report distinct violations, max
+   concurrent, and which action introduced each.
+2. **Verify empirically, never by eye.** The engine is deterministic and pure.
    Any claim about game behaviour must be demonstrated by a test that runs in
    node — not by reasoning about a screenshot, and not by reading the render
    output. This rule exists because inspecting rendered state repeatedly led to
    wrong conclusions; game-logic reasoning and a failing/passing test are the
    only accepted evidence.
-2. **Engine changes and UI changes are separate commits.** After UI work, diff
+3. **Engine changes and UI changes are separate commits.** After UI work, diff
    the engine directory to prove it is untouched.
-3. **One behaviour change at a time**, with the test written before or alongside.
-4. When something looks like a rendering bug, check the engine invariants first
+4. **One behaviour change at a time**, with the test written before or alongside.
+5. When something looks like a rendering bug, check the engine invariants first
    (below). Several "render bugs" in this project were real state corruption.
 
 ## Engine invariants (assert these in tests)
@@ -68,6 +75,33 @@ Deployed at `https://eyeofsudoku.github.io/nokta/` via GitHub Pages.
   byte-identical board (this is what makes the netcode work — see below).
 
 ---
+
+## `place` is no longer byte-identical to the original engine
+
+Through the module migration and the `switchDot` rewrite, `place`/`bomb`/AI were
+held byte-identical on purpose, to prove those changes were surgical. That no
+longer holds, deliberately:
+
+- `applyEdges` will not overwrite a slot owned by another player. Edge slots
+  have a single owner, and `resealBorders`/`bombAt` create borders owned by the
+  **ground holder** rather than derived from dots — so a slot can be someone's
+  territory boundary while both its lattice points sit empty and free to build
+  on. Placing there used to steal it. This matters beyond cosmetics because
+  `applyEdges` runs *before* `flood()`, so a stolen slot is a live barrier in
+  the capture that immediately follows. (Measured: in all 9 observed cases the
+  capture result was unchanged, so nothing was mis-captured in practice — but
+  the ordering makes it possible, and repair-after-the-fact cannot undo a
+  capture.)
+- `applyEdges` therefore returns the edges it actually wrote, and `revertEdges`
+  must be given that list — reverting the full requested list would zero a slot
+  we never owned. `simPlace` relies on this, so hard-AI lookahead now evaluates
+  the position that would really result.
+- `place` ends with `reownBorders()` as a safety net. Prevention cannot reach
+  every case: a capture can *strand* a boundary, claiming ground next to a line
+  another player drew. That still fires, so do not remove it.
+
+Everything else about `place` is unchanged, and the five standard AI/bomb
+scenarios still reproduce the pre-migration board exactly.
 
 ## Geometry model
 
