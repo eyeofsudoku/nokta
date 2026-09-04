@@ -242,6 +242,35 @@ The two acceptance cases, which are regression tests:
   **zero** times. Because the blast draws its own perimeter, it does not strand
   anyone else's line. Do not "tidy" this into symmetry without re-measuring.
 
+### Laser — `laserAt(x, y, dir, pl)`, costs `LASER_COST` tokens
+
+- The ray is `LASER_LEN` **positions** long starting **at** the clicked point —
+  not `LASER_LEN` dots. A blocked position gets no dot and the ray **continues
+  past it**, without extending to compensate, so fewer than `LASER_LEN` dots may
+  land.
+- **8 directions**, index 0-7 (`LASER_DIRS`): E, SE, S, SW, W, NW, N, NE. Not 4.
+  A line is symmetric at 180° only when it is *centred*; the anchor here is the
+  **start**, so E and W are genuinely different shots. The index goes over the
+  wire, so that order is protocol — do not reorder it.
+- **One capture pass after the whole line**, not one per dot.
+- A ray that would land nothing returns `null` and spends no token, so a fully
+  blocked shot can never be wasted.
+- Uses `applyEdges`' guard like everything else: a laser must not steal another
+  player's edge slot.
+- Four consequences the ghost must show, all verified against the engine:
+  1. skipping any position leaves a real gap — the dots either side are 2 apart
+     and no edge forms
+  2. skipping **your own** dot does *not* break the run; edges form to it from
+     both sides
+  3. skipping an **opponent's** dot *does* break it, so blocking a laser path is
+     a genuine defensive move
+  4. a 45° step can be refused by the **crossing rule** even on an empty point —
+     the dot lands, the connection does not
+- `laserPreview(x, y, dir, pl)` returns the same walk without mutating, plus a
+  per-step `links` array. **The ghost renders only from this**, so preview and
+  reality cannot drift; a test compares it against a real `laserAt` on a clone
+  in all 8 directions.
+
 ---
 
 ## Rules constants (single source of truth)
@@ -277,13 +306,17 @@ the rest:
 | `{t:'m',x,y,pl}` | place a dot |
 | `{t:'s',x,y,pl}` | switch an opponent's dot |
 | `{t:'b',x,y,pl}` | detonate a bomb at square (x,y) |
+| `{t:'l',x,y,d,pl}` | fire a laser from (x,y) in direction `d` (0-7, see `LASER_DIRS`) |
 | `{t:'seat',pl,np,size}` | host assigns a seat to a joining guest |
 | `{t:'start',size,np}` | host starts the game (host-authoritative) |
 | `{t:'name',pl,name}` | nickname broadcast |
 | `{t:'left',pl}` | a player dropped |
 
 Guards: a guest may only act as its own seat; an action is ignored unless
-`msg.pl === currentPlayer`. New game and board size are host-only, otherwise
+`msg.pl === currentPlayer`. `LASER_DIRS`' order is part of the protocol — the
+index travels over the wire, so reordering it would silently desync peers on
+different builds. A `d` outside 0-7 is refused by the engine spending nothing,
+so a malformed message is a no-op rather than a divergence. New game and board size are host-only, otherwise
 peers silently diverge onto different boards.
 
 ---
@@ -295,36 +328,23 @@ peers silently diverge onto different boards.
 - Place, capture, colonization economy
 - Bonus move per `COL_PER_MOVE` of live colonization
 - Switch token per `COL_PER_SWITCH` of lifetime colonization
-- **Switch** and **bomb** — the only two abilities that exist
+- **Switch**, **bomb** and **laser** — the three abilities that exist
+- Laser: `LASER_LEN` positions from the clicked start in one of 8 directions,
+  blocked positions skipped without extending the ray, one capture pass at the
+  end. `laserPreview` drives the ghost so preview and reality cannot drift
 - 2 and 3 player; online star-topology netcode, nicknames, win condition
 - Board sizes 20 / 30 / 50 / 150 / 300
 
 ### Planned, not built
 
-Verified against the current source: `laserAt`, `bridgeAt`, `cityAt`,
-`freezeAt`, `LASER_LEN` and `pendingPenalty` appear **nowhere** in the repo.
-None of the below exists yet — do not assume otherwise.
+Verified against the current source: `bridgeAt`, `cityAt`, `freezeAt` and
+`pendingPenalty` appear **nowhere** in the repo. None of the below exists yet —
+do not assume otherwise. (The laser is built; see above.)
 
 **Ability picker.** Replace the per-ability buttons with one modal listing every
 ability and its token cost, affordable ones enabled, the rest greyed out with the
 cost visible. Selecting arms it; Esc cancels. Every ability spends one of the
 turn's moves, like placing a dot, so the netcode keeps one ordered action stream.
-
-**Laser** (5 tokens). Up to `LASER_LEN = 10` dots in a straight line, one action.
-
-- Player clicks the **start**; the line extends in the aimed direction.
-- **R** rotates through 4 orientations: horizontal, vertical, both 45°.
-- Blocked points are **skipped and the line continues past them**. The ray is
-  `LASER_LEN` positions long; blocked positions get no dot and the line does not
-  extend further to compensate, so fewer than 10 dots may land.
-- Consequences the ghost must show, because they are strategic:
-  - skipping an **opponent's** dot leaves a real gap — the dots either side are
-    2 apart, no edge forms, and the laser will not seal there, so blocking a
-    laser path is a genuine defensive move
-  - skipping **your own** dot does not break the line; edges form to it
-  - a 45° laser can be blocked mid-run by the diagonal-crossing rule, which the
-    ghost must reflect, not just occupancy
-- Run the capture check once at the end, after all dots land.
 
 **Bridge.** Connect two of your own existing dots with a straight line. Same line
 machinery as the laser, but both ends are chosen, so it is aimed rather than

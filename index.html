@@ -382,12 +382,9 @@ function updateSwitchBtn(){
     ? `\u{1F4A5} Pick the blast centre (${bombs})`
     : `\u{1F4A5} Drop a bomb (${bombs})`;
 
-  // Online laser needs the 'l' message, which lands in the netcode commit;
-  // until then it stays a local-modes ability rather than silently desyncing.
   const lasers = Math.floor(tokens / LASER_COST);
-  const laserOk = mode !== 'online';
-  laserBtn.hidden = !(mine && !gameOver && lasers > 0 && laserOk);
-  laserBtn.disabled = !(live && lasers > 0 && laserOk);
+  laserBtn.hidden = !(mine && !gameOver && lasers > 0);
+  laserBtn.disabled = !(live && lasers > 0);
   laserBtn.classList.toggle('armed', armedMode === 'laser');
   laserBtn.textContent = armedMode === 'laser'
     ? `${LASER_ARROWS[laserDir]} Aim · R rotates (${lasers})`
@@ -745,6 +742,7 @@ function onBoardClick(gx, gy){
     // A ray that would land nothing is refused by the engine; stay armed so
     // the player can re-aim rather than silently losing the click.
     if (!doLaser(gx, gy, laserDir, pl)) return;
+    if (mode === 'online') netSend({ t: 'l', x: gx, y: gy, d: laserDir, pl });
     return;
   }
   if (!game.canPlace(gx, gy)) return;
@@ -867,6 +865,13 @@ function applyRemote(msg){
     if (msg.pl === net.myPl) return;
     if (msg.pl !== currentPlayer) return;
     if (doBomb(msg.x, msg.y, msg.pl)) panToIfOffscreen(msg.x, msg.y);
+  } else if (msg.t === 'l'){
+    if (msg.pl === net.myPl) return;
+    if (msg.pl !== currentPlayer) return;
+    // d is the direction index into LASER_DIRS; the engine refuses anything
+    // outside 0-7, so a malformed message lands as a no-op rather than
+    // diverging this peer from the others.
+    if (doLaser(msg.x, msg.y, msg.d, msg.pl)) panToIfOffscreen(msg.x, msg.y);
   } else if (msg.t === 'name'){
     if (nameIn[msg.pl]){ nameIn[msg.pl].value = String(msg.name || '').slice(0, 12); nameTouched[msg.pl] = true; }
     updateHUD(); dirty = true;
@@ -883,7 +888,7 @@ function wireHostConn(conn, seat){
       relay(msg, seat);                 // other guest needs the name too
       return;
     }
-    if (msg.t === 'm' || msg.t === 's' || msg.t === 'b'){
+    if (msg.t === 'm' || msg.t === 's' || msg.t === 'b' || msg.t === 'l'){
       if (msg.pl !== seat) return;      // a guest may only act as its own seat
       applyRemote(msg);
       relay(msg, seat);                 // forward to the third player
