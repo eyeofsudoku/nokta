@@ -99,29 +99,45 @@
   .seg button:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
   #diffSeg.isHidden{display:none}
 
-  #switchBtn{
-    width:100%;margin-top:7px;font-size:11.5px;font-weight:700;
-    background:#fff;color:var(--ink);border:1px solid var(--line);
+  #extrasBtn{
+    width:100%;margin-top:7px;font-size:12px;font-weight:800;letter-spacing:.04em;
+    min-height:44px;background:#fff;color:var(--ink);border:1px solid var(--line);
   }
-  #switchBtn:hover:not(:disabled){border-color:rgba(32,38,58,.4)}
-  #switchBtn.armed{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-  #switchBtn:disabled{opacity:.45;cursor:default}
+  #extrasBtn:hover:not(:disabled){border-color:rgba(32,38,58,.4)}
+  /* accent only when something is actually usable right now */
+  #extrasBtn.hot{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  #extrasBtn:disabled{opacity:.45;cursor:default}
+  #extrasBtn .armedTag{font-weight:600;opacity:.85}
 
-  #bombBtn{
-    width:100%;margin-top:5px;font-size:11.5px;font-weight:700;
-    background:#fff;color:var(--ink);border:1px solid var(--line);
+  #abilityModal{
+    position:fixed;inset:0;z-index:60;display:flex;align-items:center;
+    justify-content:center;padding:18px;background:rgba(32,38,58,.45);
   }
-  #bombBtn:hover:not(:disabled){border-color:rgba(32,38,58,.4)}
-  #bombBtn.armed{background:var(--red);color:#fff;border-color:var(--red)}
-  #bombBtn:disabled{opacity:.45;cursor:default}
-
-  #laserBtn{
-    width:100%;margin-top:5px;font-size:11.5px;font-weight:700;
-    background:#fff;color:var(--ink);border:1px solid var(--line);
+  #abilityModal[hidden]{display:none}
+  #abilityCard{
+    width:100%;max-width:520px;max-height:88vh;overflow-y:auto;
+    background:var(--paper);border-radius:14px;padding:18px;
+    box-shadow:0 18px 50px rgba(32,38,58,.3);
   }
-  #laserBtn:hover:not(:disabled){border-color:rgba(32,38,58,.4)}
-  #laserBtn.armed{background:var(--blue);color:#fff;border-color:var(--blue)}
-  #laserBtn:disabled{opacity:.45;cursor:default}
+  #abilityCard h2{font-family:var(--font-display);font-size:17px;margin:0 0 2px}
+  #abilityTokens{font-size:11.5px;color:var(--ink-soft);margin-bottom:4px}
+  #abilityNote{font-size:11.5px;color:var(--ink-soft);margin-bottom:12px}
+  #abilityList{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  .abilityItem{
+    display:flex;flex-direction:column;align-items:center;text-align:center;gap:5px;
+    min-height:44px;padding:13px 11px;border-radius:11px;cursor:pointer;
+    background:#fff;border:1px solid var(--line);color:var(--ink);font:inherit;
+  }
+  .abilityItem:hover:not(:disabled){border-color:rgba(32,38,58,.45)}
+  .abilityItem:disabled{opacity:.5;cursor:default}
+  .abilityItem .ic{font-size:22px;line-height:1}
+  .abilityItem .nm{font-weight:800;font-size:13px}
+  .abilityItem .ct{font-size:11px;font-weight:700;color:var(--ink-soft)}
+  .abilityItem .ds{font-size:11px;line-height:1.35;color:var(--ink-soft)}
+  .abilityItem .st{font-size:10.5px;font-weight:700;color:var(--red)}
+  .abilityItem .key{font-size:10px;opacity:.6;font-weight:700}
+  #abilityClose{margin-top:13px;width:100%;min-height:44px;font-size:12px;font-weight:700}
+  @media (max-width:480px){ #abilityList{grid-template-columns:1fr} }
 
   #netBox{margin-top:9px;padding:9px 10px;border-radius:9px;background:rgba(32,38,58,.06)}
   #netBox.isHidden{display:none}
@@ -231,9 +247,7 @@
   <div class="meta" id="mGreen" hidden>colonized 0 &middot; 1 move/turn</div>
 
   <div id="turnPill">Your turn — place a dot</div>
-  <button type="button" id="switchBtn" hidden>⇄ Switch a dot</button>
-  <button type="button" id="bombBtn" hidden>💥 Drop a bomb</button>
-  <button type="button" id="laserBtn" hidden>─ Fire a laser</button>
+  <button type="button" id="extrasBtn">EXTRAS</button>
 
   <div class="seg" id="modeSeg" role="group" aria-label="Game mode">
     <button type="button" data-mode="ai" class="active">Vs AI</button>
@@ -289,12 +303,24 @@
 
 <div class="panel" id="hint"><b>Click</b> place &middot; <b>drag</b> pan &middot; <b>scroll</b> zoom &middot; close a loop to claim territory &middot; every 10 colonized area = +1 move</div>
 
+<div id="abilityModal" hidden role="dialog" aria-modal="true" aria-labelledby="abilityTitle">
+  <div id="abilityCard">
+    <h2 id="abilityTitle">Extras</h2>
+    <div id="abilityTokens"></div>
+    <div id="abilityNote">Using an extra spends one of your turn’s moves, just like placing a dot.</div>
+    <div id="abilityList"></div>
+    <button type="button" id="abilityClose">Close (Esc)</button>
+  </div>
+</div>
+
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script type="module">
 /* Engine lives in src/engine/ — DOM-free and independently testable.
    ES modules need a real server: `python3 -m http.server 8000`.
    The UI below is unchanged and reads these via module scope. */
-import { HUMAN, AIP, GREEN, LASER_COST } from './src/engine/constants.js';
+import { HUMAN, AIP, GREEN } from './src/engine/constants.js';
+import { ABILITIES, abilityByMode, anyAffordable, tokenProgress }
+  from './src/ui/abilities.js';
 import { Game } from './src/engine/game.js';
 import { chooseAIMove } from './src/engine/ai.js';
 
@@ -348,63 +374,109 @@ const whoGreen = document.getElementById('whoGreen');
 const sGreen = document.getElementById('sGreen'), mGreen = document.getElementById('mGreen');
 const rowGreen = document.getElementById('rowGreen');
 const nameIn = { 1: whoBlue, 2: whoRed, 3: whoGreen };
-const switchBtn = document.getElementById('switchBtn');
-const bombBtn = document.getElementById('bombBtn');
-const laserBtn = document.getElementById('laserBtn');
-let armedMode = null;              // null | 'switch' | 'bomb' | 'laser'
+const extrasBtn = document.getElementById('extrasBtn');
+const abilityModal = document.getElementById('abilityModal');
+const abilityList = document.getElementById('abilityList');
+const abilityTokens = document.getElementById('abilityTokens');
+const abilityClose = document.getElementById('abilityClose');
+let armedMode = null;              // null, or an ABILITIES entry's `mode`
+let modalOpen = false;
 // Aim for the laser, an index into LASER_DIRS (0-7, E..NE). Kept across shots
 // so repeat fire in the same direction needs no re-aiming. R rotates it.
 let laserDir = 0;
 const LASER_ARROWS = ['\u2192','\u2198','\u2193','\u2199','\u2190','\u2196','\u2191','\u2197'];
 let gameOver = false;
 
-// Kept as a getter so the existing render/hover code reads naturally.
-function isArmed(m){ return armedMode === m; }
 
-function updateSwitchBtn(){
+// Is the local player able to act at all right now? Every gate the picker
+// needs — whose turn it is, input lock, game over — in one place.
+function canAct(){
   const mine = (mode === 'online') ? (net.connected && currentPlayer === net.myPl)
                                    : (mode === 'pvp' || currentPlayer === HUMAN);
-  const tokens = game.switchesFor(currentPlayer);
-  const bombs = game.bombsFor(currentPlayer);
-  const live = mine && !locked && !gameOver;
-
-  switchBtn.hidden = !(mine && !gameOver && tokens > 0);
-  switchBtn.disabled = !(live && tokens > 0);
-  switchBtn.classList.toggle('armed', armedMode === 'switch');
-  switchBtn.textContent = armedMode === 'switch'
-    ? `\u21c4 Pick an opponent dot (${tokens})`
-    : `\u21c4 Switch a dot (${tokens})`;
-
-  bombBtn.hidden = !(mine && !gameOver && bombs > 0);
-  bombBtn.disabled = !(live && bombs > 0);
-  bombBtn.classList.toggle('armed', armedMode === 'bomb');
-  bombBtn.textContent = armedMode === 'bomb'
-    ? `\u{1F4A5} Pick the blast centre (${bombs})`
-    : `\u{1F4A5} Drop a bomb (${bombs})`;
-
-  const lasers = Math.floor(tokens / LASER_COST);
-  laserBtn.hidden = !(mine && !gameOver && lasers > 0);
-  laserBtn.disabled = !(live && lasers > 0);
-  laserBtn.classList.toggle('armed', armedMode === 'laser');
-  laserBtn.textContent = armedMode === 'laser'
-    ? `${LASER_ARROWS[laserDir]} Aim · R rotates (${lasers})`
-    : `─ Fire a laser (${lasers})`;
-
-  if (!live && armedMode) armedMode = null;
+  return mine && !locked && !gameOver;
 }
 
-switchBtn.addEventListener('click', () => {
-  armedMode = armedMode === 'switch' ? null : 'switch';
-  updateSwitchBtn(); dirty = true;
+// Single entry point for arming. Only one ability is ever armed, so this
+// clears whatever was armed before rather than adding to it.
+function armAbility(a){
+  armedMode = (a && armedMode !== a.mode) ? a.mode : null;
+  closeAbilities();
+  updateExtras();
+  dirty = true;
+}
+
+function updateExtras(){
+  const live = canAct();
+  const tokens = game.switchesFor(currentPlayer);
+  // Always visible, never hidden: a button that comes and goes shifts the
+  // layout mid-game, and hiding unaffordable abilities means a player never
+  // finds out they exist. Disabled when you cannot act, accented only when
+  // something is genuinely usable this instant.
+  extrasBtn.disabled = !live;
+  extrasBtn.classList.toggle('hot', live && anyAffordable(game, currentPlayer));
+  const armed = abilityByMode(armedMode);
+  extrasBtn.innerHTML = armed
+    ? `EXTRAS \u00b7 \u21c4${tokens} <span class="armedTag">\u2014 ${armed.name} armed</span>`
+    : `EXTRAS \u00b7 \u21c4${tokens}`;
+
+  // An armed ability can become unaffordable between moves (bonus moves let
+  // you act twice on the same tokens), so re-check rather than trusting the
+  // state set when it was armed.
+  if (armed && !armed.canUse(game, currentPlayer)) armedMode = null;
+  // Never leave the picker open across a turn change, an arriving remote
+  // move, or a win — the player must not fire on someone else's turn because
+  // a dialog stayed up.
+  if (!live){
+    if (armedMode) armedMode = null;
+    if (modalOpen) closeAbilities();
+  }
+  if (modalOpen) renderAbilities();
+}
+
+function renderAbilities(){
+  const pl = currentPlayer;
+  const p = tokenProgress(game, pl);
+  abilityTokens.textContent =
+    `${p.have} token${p.have === 1 ? '' : 's'} \u00b7 ${p.into}/${p.per} colonized toward the next`;
+  abilityList.replaceChildren();
+  ABILITIES.forEach((a, i) => {
+    const ok = a.canUse(game, pl);
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'abilityItem';
+    b.disabled = !ok;
+    const short = Math.max(0, a.cost - p.have);
+    b.innerHTML =
+      `<span class="ic">${a.icon}</span>` +
+      `<span class="nm">${a.name}</span>` +
+      `<span class="ct">${a.cost} token${a.cost === 1 ? '' : 's'}</span>` +
+      `<span class="ds">${a.description}</span>` +
+      (ok ? `<span class="key">${i + 1}</span>`
+          : `<span class="st">Need ${short} more token${short === 1 ? '' : 's'}</span>`);
+    b.addEventListener('click', () => armAbility(a));
+    abilityList.appendChild(b);
+  });
+}
+
+// Opening the picker spends nothing; only committing an action does.
+function openAbilities(){
+  if (!canAct()) return;
+  modalOpen = true;
+  abilityModal.hidden = false;
+  renderAbilities();
+}
+function closeAbilities(){
+  modalOpen = false;
+  abilityModal.hidden = true;
+}
+
+extrasBtn.addEventListener('click', () => {
+  modalOpen ? closeAbilities() : openAbilities();
 });
-bombBtn.addEventListener('click', () => {
-  armedMode = armedMode === 'bomb' ? null : 'bomb';
-  updateSwitchBtn(); dirty = true;
-});
-laserBtn.addEventListener('click', () => {
-  armedMode = armedMode === 'laser' ? null : 'laser';
-  updateSwitchBtn(); dirty = true;
-});
+abilityClose.addEventListener('click', closeAbilities);
+// backdrop only — a click inside the card must not close it
+abilityModal.addEventListener('click', e => { if (e.target === abilityModal) closeAbilities(); });
+
 const pill  = document.getElementById('turnPill');
 const muteBtn = document.getElementById('muteBtn');
 const logBtn = document.getElementById('logBtn');
@@ -496,7 +568,7 @@ function updateHUD(){
     sGreen.textContent = fmt(game.area(GREEN));
     mGreen.textContent = metaLine(GREEN);
   }
-  updateSwitchBtn();
+  updateExtras();
 }
 function setPill(text, ai){
   pill.textContent = text;
@@ -594,7 +666,7 @@ function startTurn(pl){
   // must run AFTER `locked` is set for this turn — updateHUD() above ran while
   // `locked` still held the previous turn's value, which left the switch
   // button disabled on the turn right after an opponent's move.
-  updateSwitchBtn();
+  updateExtras();
   dirty = true;
 }
 
@@ -657,7 +729,7 @@ function doMove(gx, gy, pl){
 function advanceTurn(pl){
   if (checkWin()) return;               // game over — don't hand the turn on
   movesLeft--;
-  updateSwitchBtn();
+  updateExtras();
   if (movesLeft > 0){
     setPill(`${turnLabel(pl)} \u2014 ${movesLeft} move${movesLeft > 1 ? 's' : ''} left`, false);
   } else {
@@ -704,6 +776,7 @@ function checkWin(){
   const share = Math.round(100 / game.np);
   setPill(`\u{1F3C6} ${playerName(w)} wins \u2014 over ${share}% of the board`, false);
   pill.style.color = COL[w];
+  updateExtras();          // closes the picker and disarms — the game is over
   dirty = true;
   return true;
 }
@@ -1518,12 +1591,20 @@ window.addEventListener('keydown', e => {
   // in nicknames), so without this guard those letters can't be typed at all.
   const t = e.target;
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
-  if (e.key === 'Escape' && armedMode){
-    armedMode = null; updateSwitchBtn(); dirty = true; e.preventDefault(); return;
+  // Esc layers: close the picker first, disarm second.
+  if (e.key === 'Escape' && (modalOpen || armedMode)){
+    if (modalOpen) closeAbilities(); else armedMode = null;
+    updateExtras(); dirty = true; e.preventDefault(); return;
+  }
+  // number keys pick the nth ability while the picker is open
+  if (modalOpen && e.key >= '1' && e.key <= '9'){
+    const a = ABILITIES[Number(e.key) - 1];
+    if (a && a.canUse(game, currentPlayer)) armAbility(a);
+    e.preventDefault(); return;
   }
   if ((e.key === 'r' || e.key === 'R') && armedMode === 'laser'){
     laserDir = (laserDir + 1) & 7;   // 8 directions: the anchor is the ray's
-    updateSwitchBtn(); dirty = true; // START, so E and W are different shots
+    updateExtras(); dirty = true; // START, so E and W are different shots
     e.preventDefault(); return;
   }
   const step = 90 / zoom;

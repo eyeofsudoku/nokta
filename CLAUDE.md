@@ -23,7 +23,8 @@ src/engine/
   ai.js               chooseAIMove, findBestReply, difficulty tiers
 src/render/           empty — migration step 3
 src/net/              empty — migration step 4
-src/ui/               empty — migration step 4
+src/ui/
+  abilities.js        the ability registry (see below)
 test/invariants.test.js
 ```
 
@@ -271,6 +272,29 @@ The two acceptance cases, which are regression tests:
   reality cannot drift; a test compares it against a real `laserAt` on a clone
   in all 8 directions.
 
+### Abilities are registry-driven
+
+Every ability the player can pick lives as **one entry** in
+`src/ui/abilities.js`: `{ id, mode, icon, name, cost, description, canUse }`.
+The EXTRAS button, the picker modal, the affordability accent and the number-key
+shortcuts all read from that table and branch on **nothing** ability-specific —
+adding Bridge or Freeze to the picker is one entry, not edits scattered through
+`index.html`.
+
+- `mode` is the arming instruction: it is the value the UI puts in `armedMode`,
+  which keeps `abilities.js` DOM-free and importable on its own.
+- **Costs and sizes are read from `constants.js`, never restated**, so retuning
+  `BOMB_COST` or `LASER_LEN` updates the picker text automatically.
+- The one exception: the engine has no `SWITCH_COST` — `canSwitch()` encodes the
+  price as `switchesFor(pl) > 0`, so the registry declares `SWITCH_COST = 1`
+  locally. If a real constant is ever added, import it and delete that.
+- A new ability still needs its own click dispatch and ghost in `index.html`;
+  the registry covers everything the *picker* needs, not the action itself.
+
+If adding an ability ever requires editing the modal, the button or the key
+handling, the abstraction has failed — fix it in the registry rather than
+working around it.
+
 ---
 
 ## Rules constants (single source of truth)
@@ -329,6 +353,8 @@ peers silently diverge onto different boards.
 - Bonus move per `COL_PER_MOVE` of live colonization
 - Switch token per `COL_PER_SWITCH` of lifetime colonization
 - **Switch**, **bomb** and **laser** — the three abilities that exist
+- **EXTRAS ability picker** — one button opening a modal, driven entirely by the
+  registry in `src/ui/abilities.js`
 - Laser: `LASER_LEN` positions from the clicked start in one of 8 directions,
   blocked positions skipped without extending the ray, one capture pass at the
   end. `laserPreview` drives the ghost so preview and reality cannot drift
@@ -340,11 +366,6 @@ peers silently diverge onto different boards.
 Verified against the current source: `bridgeAt`, `cityAt`, `freezeAt` and
 `pendingPenalty` appear **nowhere** in the repo. None of the below exists yet —
 do not assume otherwise. (The laser is built; see above.)
-
-**Ability picker.** Replace the per-ability buttons with one modal listing every
-ability and its token cost, affordable ones enabled, the rest greyed out with the
-cost visible. Selecting arms it; Esc cancels. Every ability spends one of the
-turn's moves, like placing a dot, so the netcode keeps one ordered action stream.
 
 **Bridge.** Connect two of your own existing dots with a straight line. Same line
 machinery as the laser, but both ends are chosen, so it is aimed rather than
