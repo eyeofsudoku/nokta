@@ -51,6 +51,10 @@ export class Game {
     this.switchSpent = [0, 0, 0, 0];
     this.dotList = [];        // {x,y} for fast candidate generation
     this.lastPlaced = [];     // recent placements for UI markers
+    // Capital square per player, indexed by player id; null = none.
+    // A MARKER ONLY — the ground itself is ordinary ground. Nothing in
+    // place/flood/commitCapture/bombAt/laserAt reads this.
+    this.capitals = [null, null, null, null];
   }
 
   // Turn order for 2 or 3 players: 1 -> 2 -> (3) -> 1
@@ -721,6 +725,101 @@ export class Game {
     return { landed: positions.length, gainedQ: cap.q, colQ: cap.colq, positions };
   }
 
+  /* ---- CAPITAL: setup-time founding -------------------------------- */
+  // A capital is NORMAL GROUND plus a marker. There are NO engine guards
+  // anywhere: bombs, lasers and ordinary enclosure act on a capital square
+  // exactly as on any other square, and nothing in place/flood/
+  // commitCapture/bombAt/laserAt branches on this.capitals. That is
+  // deliberate — an earlier design gave the capital bomb immunity, and it
+  // cannot work: an exempt square sits inside a region the attacker's own
+  // blast perimeter has made unreachable from outside, so commitCapture
+  // hands it over free on ANY later capturing move by that player,
+  // anywhere on the board. flood/commitCapture is a board-wide mechanism
+  // that knows nothing about per-operation exemptions. If bombs dominate,
+  // the dial is BOMB_COST.
+  //
+  // Born like a blast so the board is invariant-legal from turn zero:
+  // 4 corner dots, the 4 perimeter edges, all 4 quarters owned. Anything
+  // less leaves an open side (owned ground meeting empty ground with no
+  // line between them) or a square that cannot be outlined at all.
+  //
+  // Setup-time only. Coordinates come from capitalSites() in geometry.js
+  // and are sent as COORDINATES over the wire, never as a seed, so
+  // replaying an action stream still reproduces a byte-identical board.
+  foundCapital(sx, sy, pl){
+    if (!this.inS(sx, sy) || pl < 1 || pl > this.np) return null;
+    const { P, N, owner } = this;
+    const x1 = sx + 1, y1 = sy + 1;
+
+    // Corner dots. Displacing someone else's dot kills their links through
+    // it, exactly as bombAt does — an edge slot has a single owner, and a
+    // stale link from a dot that is no longer theirs is a live flood
+    // barrier in their colour. Cannot arise at setup on an empty board;
+    // present so this is not silently wrong if it is ever called later.
+    for (const [x, y] of [[sx, sy], [x1, sy], [sx, y1], [x1, y1]]){
+      const i = y * P + x, prev = this.dots[i];
+      if (prev === pl) continue;
+      if (prev !== 0){
+        for (const e of this.incidentEdges(x, y)){
+          const arr = this._edgeArr(e.t);
+          if (arr[e.i] === prev) arr[e.i] = 0;
+        }
+      } else this.dotList.push({ x, y });
+      this.dots[i] = pl;
+    }
+
+    // The square's own fence.
+    this.hE[sy * P + sx] = pl;
+    this.hE[y1 * P + sx] = pl;
+    this.vE[sy * P + sx] = pl;
+    this.vE[sy * P + x1] = pl;
+
+    // All four quarters, one owner — the only legal all-same state.
+    //
+    // Capital ground is FRESH, not colonized: colFlag, colQ and colEarnedQ
+    // must not move. Crediting it as colonization would fake a capture
+    // that never happened and pay out switch tokens at turn zero, and the
+    // colEarnedQ-monotonic invariant would be measuring a lie.
+    const base = (sy * N + sx) * 4;
+    for (let t = 0; t < 4; t++){
+      const c = base + t, prev = owner[c];
+      if (prev === pl) continue;
+      if (prev !== 0){
+        this.scoreQ[prev]--;
+        if (this.colFlag[c]){ this.colQ[prev]--; this.colFlag[c] = 0; }
+      }
+      owner[c] = pl; this.scoreQ[pl]++;
+    }
+
+    this.capitals[pl] = { sx, sy };
+    return { sx, sy, pl };
+  }
+
+  // Found every capital from the layout geometry produced. Order is fixed
+  // (player 1 upward) so the result is a function of the layout alone.
+  foundCapitals(sites){
+    if (!sites || sites.length < this.np) return null;
+    const out = [];
+    for (let p = 1; p <= this.np; p++)
+      out.push(this.foundCapital(sites[p - 1].sx, sites[p - 1].sy, p));
+    return out;
+  }
+
+  // Who holds a capital square right now: the owner of ALL FOUR quarters,
+  // or 0 if the square is split. Split means CONTESTED and pays nobody.
+  // Derived from owner[] every time, never stored — the ground can change
+  // hands through capture, bomb or laser without any of them knowing a
+  // capital exists.
+  capitalHolder(pl){
+    const cap = this.capitals[pl];
+    if (!cap) return 0;
+    const base = (cap.sy * this.N + cap.sx) * 4;
+    const o = this.owner[base];
+    if (!o) return 0;
+    for (let t = 1; t < 4; t++) if (this.owner[base + t] !== o) return 0;
+    return o;
+  }
+
   /* ---- the single mutation API (human and AI both use this) ------ */
   place(x, y, pl){
     if (!this.canPlace(x, y)) return null;
@@ -813,6 +912,7 @@ export class Game {
     g.switchSpent = this.switchSpent.slice();
     g.dotList = this.dotList.slice();
     g.lastPlaced = this.lastPlaced.slice();
+    g.capitals = this.capitals.map(c => c && { sx: c.sx, sy: c.sy });
     return g;
   }
 }
