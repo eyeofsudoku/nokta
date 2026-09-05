@@ -26,3 +26,15 @@ export const LASER_COST     = 5;    // switch tokens spent to fire one laser
 export const COL_WIN_BONUS  = 1;
 
 export function oppOf(p){ return p === 1 ? 2 : 1; }   // 2-player only (AI paths)
+
+/* ---- capital ------------------------------------------------------
+   The capital is NORMAL GROUND plus a marker: no engine guards, no bomb
+   immunity. See CLAUDE.md. These two dials control PLACEMENT only.
+
+   The margin scales with N rather than being fixed. A fixed margin of 2
+   leaves a 6x6 board with ZERO legal sites once minimum separation is
+   applied, which would make the admin small boards useless for testing
+   the capital — and on a 300x300 a margin of 2 is functionally the rim.
+   "Inland" only means something relative to board size. */
+export const CAPITAL_MARGIN_DIV = 10;  // margin = max(1, round(N / this))
+export const CAPITAL_MIN_SEP    = 2;   // min Chebyshev gap, in squares, between capitals

@@ -23,7 +23,7 @@
    ================================================================ */
 'use strict';
 
-import { BOMB_SIZE } from './constants.js';
+import { BOMB_SIZE, CAPITAL_MARGIN_DIV, CAPITAL_MIN_SEP } from './constants.js';
 
 /* ---- index maths ------------------------------------------------ */
 export function pi(P, x, y){ return y * P + x; }
@@ -95,3 +95,93 @@ export const LASER_DIRS = [
   [ 1,  0], [ 1,  1], [ 0,  1], [-1,  1],
   [-1,  0], [-1, -1], [ 0, -1], [ 1, -1],
 ];
+
+/* ---- capital placement ------------------------------------------
+   Pure functions of the board dimensions. No state, no engine access.
+
+   Two layers on purpose:
+   - capitalSitesFrom() is fully DETERMINISTIC — given the anchor square
+     it derives every site. This is the part the netcode depends on and
+     the part the tests enumerate exhaustively.
+   - capitalSites() is the thin random layer that only chooses the
+     anchor. The host picks once and sends the resulting COORDINATES in
+     the start message, never a seed, so replaying an action stream on a
+     fresh engine still reproduces a byte-identical board.
+
+   Capitals are born like a blast: 4 corner dots and 4 owned edges. Two
+   capitals sharing a corner dot would put two owners on one edge slot,
+   which is unrepresentable — hence CAPITAL_MIN_SEP. */
+
+// Squares of clear rim on every side. Scales with N; never below 1.
+export function capitalMargin(N){
+  return Math.max(1, Math.round(N / CAPITAL_MARGIN_DIV));
+}
+
+// Is (sx,sy) a square at least `margin` squares clear of every rim?
+function inland(N, sx, sy, m){
+  return sx >= m && sy >= m && sx <= N - 1 - m && sy <= N - 1 - m;
+}
+
+// Chebyshev gap in squares. Two squares that touch (even diagonally)
+// measure 1; a gap of >= CAPITAL_MIN_SEP leaves a clear square between.
+function sep(a, b){
+  return Math.max(Math.abs(a.sx - b.sx), Math.abs(a.sy - b.sy));
+}
+
+// Every capital site derived from one anchor square, or null if the
+// resulting layout is illegal (off board, too near a rim, or two
+// capitals close enough to share a corner dot).
+//
+// 2p: exact 180 degree rotation about the board centre.
+// 3p: three points 120 degrees apart on the circle through the anchor,
+//     ROUNDED to squares — near-symmetric, not exact. Accepted: a lattice
+//     has no exact 3-fold symmetry about a square centre.
+export function capitalSitesFrom(N, np, sx, sy){
+  const m = capitalMargin(N);
+  if (!inS(N, sx, sy) || !inland(N, sx, sy, m)) return null;
+
+  const sites = [{ sx, sy }];
+  const c = (N - 1) / 2, dx = sx - c, dy = sy - c;
+
+  if (np === 2){
+    sites.push({ sx: N - 1 - sx, sy: N - 1 - sy });
+  } else if (np === 3){
+    for (const a of [2 * Math.PI / 3, 4 * Math.PI / 3]){
+      const cs = Math.cos(a), sn = Math.sin(a);
+      sites.push({
+        sx: Math.round(c + dx * cs - dy * sn),
+        sy: Math.round(c + dx * sn + dy * cs)
+      });
+    }
+  } else return null;
+
+  for (const s of sites)
+    if (!inS(N, s.sx, s.sy) || !inland(N, s.sx, s.sy, m)) return null;
+  for (let i = 0; i < sites.length; i++)
+    for (let j = i + 1; j < sites.length; j++)
+      if (sep(sites[i], sites[j]) < CAPITAL_MIN_SEP) return null;
+
+  return sites;
+}
+
+// Every anchor square that yields a legal layout. Enumerated rather than
+// rejection-sampled so an impossible board reports empty instead of
+// spinning forever, and so tests can measure how much choice a board has.
+export function capitalAnchors(N, np){
+  const m = capitalMargin(N), out = [];
+  for (let sy = m; sy <= N - 1 - m; sy++)
+    for (let sx = m; sx <= N - 1 - m; sx++)
+      if (capitalSitesFrom(N, np, sx, sy)) out.push({ sx, sy });
+  return out;
+}
+
+// Pick a layout at random. Returns null when the board admits none, so
+// the caller decides whether to play without capitals rather than the
+// geometry throwing.
+export function capitalSites(N, np, rnd){
+  const anchors = capitalAnchors(N, np);
+  if (!anchors.length) return null;
+  const r = (rnd || Math.random)();
+  const a = anchors[Math.min(anchors.length - 1, Math.floor(r * anchors.length))];
+  return capitalSitesFrom(N, np, a.sx, a.sy);
+}
