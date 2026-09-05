@@ -79,18 +79,26 @@ export class Game {
   // ground already counted once — not a separate tally.
   winScore(pl){ return this.area(pl) + this.colArea(pl) * COL_WIN_BONUS; }
 
+  // Highest winScore, and whether it's shared. Split out of winner() because
+  // the board-full end condition needs the same answer, and two copies of the
+  // tie rule would eventually disagree.
+  leader(){
+    let pl = 0, score = -1, tied = false;
+    for (let p = 1; p <= this.np; p++){
+      const s = this.winScore(p);
+      if (s > score){ score = s; pl = p; tied = false; }
+      else if (s === score){ tied = true; }
+    }
+    return { pl, score, tied };
+  }
+
   winner(){
     const need = this.totalArea() / this.np;
     // The bonus makes it possible for two players to cross at once, which the
     // plain-area rule could not. Declare only a strict single leader.
-    let best = 0, bestS = -1, tied = false;
-    for (let p = 1; p <= this.np; p++){
-      const s = this.winScore(p);
-      if (s > bestS){ bestS = s; best = p; tied = false; }
-      else if (s === bestS){ tied = true; }
-    }
-    if (bestS <= need || tied) return 0;
-    return best;
+    const { pl, score, tied } = this.leader();
+    if (score <= need || tied) return 0;
+    return pl;
   }
 
   // Is any placement legal anywhere? canPlace() takes no player — a point is
