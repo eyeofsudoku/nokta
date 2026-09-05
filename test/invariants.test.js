@@ -391,6 +391,81 @@ test('win: two players tied above the threshold returns 0, not player 1', () => 
   assert(G.winner() === 2, 'a strict leader above the threshold must win');
 });
 
+/* ---- end condition -------------------------------------------------- */
+
+// Every lattice point occupied, so canPlace() is false everywhere and
+// hasLegalMove() is false. Dots are set directly: we are probing gameResult's
+// branching, not how a board legitimately fills up.
+function fillEveryPoint(G){
+  for (let i = 0; i < G.dots.length; i++) G.dots[i] = 1 + (i % G.np);
+  assert(!G.hasLegalMove(), 'setup: the board should have no legal placement');
+  return G;
+}
+
+test('end: an open board with nobody near the threshold is still in progress', () => {
+  const G = new Game(20, 2);
+  assert(G.hasLegalMove(), 'setup: a fresh board must have legal moves');
+  const r = G.gameResult();
+  assert(r.over === false, 'a fresh board must not be over');
+  assert(r.winner === 0 && r.reason === null, `got ${JSON.stringify(r)}`);
+});
+
+test('end: the threshold takes priority over the board-full path', () => {
+  // open board, someone already past the line
+  const open = new Game(20, 2);
+  grantGround(open, 1, 201 * 4);                  // area 201, just past need = 200
+  assert(open.hasLegalMove(), 'setup: the board should still be open');
+  let r = open.gameResult();
+  assert(r.over === true && r.reason === 'threshold', `open board: ${JSON.stringify(r)}`);
+  assert(r.winner === 1, `open board winner: ${r.winner}`);
+
+  // and when BOTH conditions hold at once, threshold must still be the reason
+  const full = new Game(20, 2);
+  grantGround(full, 1, 201 * 4);
+  fillEveryPoint(full);
+  r = full.gameResult();
+  assert(r.over === true && r.reason === 'threshold',
+         `full board should still report threshold: ${JSON.stringify(r)}`);
+  assert(r.winner === 1, `full board winner: ${r.winner}`);
+});
+
+test('end: no legal placement with a clear leader ends as exhausted', () => {
+  const G = new Game(8, 2);
+  const next = grantGround(G, 1, 100, { from: 0 });
+  grantGround(G, 2, 20, { from: next });
+  assert(G.winner() === 0, 'setup: nobody should be past the threshold');
+  fillEveryPoint(G);
+  const r = G.gameResult();
+  assert(r.over === true, 'a board with no legal placement must be over');
+  assert(r.reason === 'exhausted', `expected exhausted, got ${r.reason}`);
+  assert(r.winner === 1, `expected player 1 to take it, got ${r.winner}`);
+});
+
+test('end: an exhausted board with equal winScores is a draw, not player 1', () => {
+  const G = new Game(8, 2);
+  const next = grantGround(G, 1, 40, { from: 0 });
+  grantGround(G, 2, 40, { from: next });
+  assert(G.winScore(1) === G.winScore(2), 'setup: the two should be exactly level');
+  assert(G.winner() === 0, 'setup: nobody should be past the threshold');
+  fillEveryPoint(G);
+  const r = G.gameResult();
+  assert(r.over === true && r.reason === 'exhausted', `got ${JSON.stringify(r)}`);
+  assert(r.winner === 0, `a tie must be a draw, got player ${r.winner}`);
+});
+
+test('end: colonization decides an exhausted board at equal area', () => {
+  const G = new Game(8, 2);
+  const next = grantGround(G, 1, 64, { from: 0 });                      // plain
+  grantGround(G, 2, 64, { from: next, colonized: true });               // colonized
+  assert(G.area(1) === G.area(2), 'setup: the two should hold equal AREA');
+  assert(G.winScore(2) > G.winScore(1), 'setup: colonized ground should score higher');
+  assert(G.winner() === 0, 'setup: nobody should be past the threshold');
+  fillEveryPoint(G);
+  const r = G.gameResult();
+  assert(r.over === true && r.reason === 'exhausted', `got ${JSON.stringify(r)}`);
+  assert(r.winner === 2, `colonized holdings should take it, got player ${r.winner}`);
+});
+
 /* ---- laser ---------------------------------------------------------- */
 
 // owner of the edge slot between two ADJACENT lattice points, or 0

@@ -20,7 +20,8 @@ src/engine/
   geometry.js         index maths: pi/inP/inS, incidentCells, incidentEdges,
                       blastBounds, inBlast, cellNeighbours
   game.js             the Game class — place, flood, commitCapture, switchDot,
-                      bombAt, clearInteriorEdges, resealBorders, reownBorders
+                      bombAt, laserAt, clearInteriorEdges, resealBorders,
+                      reownBorders, winScore/leader/winner/gameResult
   ai.js               chooseAIMove, findBestReply, difficulty tiers
 src/render/           empty — migration step 3
 src/net/              empty — migration step 4
@@ -337,6 +338,32 @@ Two consequences worth knowing:
 - The old reachability note below is now conservative. Greedy local play still
   rarely wins on area alone, but a bomb-and-switch game that colonizes heavily
   reaches the line at half the ground it used to need.
+
+### The two ways a game ends — `gameResult()`
+
+`gameResult()` returns a **shape**, not a number, because winner 0 is ambiguous
+on its own: `{over:true, winner:0}` is a genuine draw and `{over:false,
+winner:0}` is a game still in progress. A caller reading a bare 0 as "keep
+playing" would never end a drawn game.
+
+| `reason` | meaning |
+|---|---|
+| `'threshold'` | someone passed `totalArea()/np` on `winScore` |
+| `'exhausted'` | no legal placement remains; highest `winScore` takes it |
+| `null` | still in progress |
+
+**Threshold is checked first**, so a board that is simultaneously full and won
+reports `'threshold'`. An exhausted board with equal `winScore`s is a **draw**,
+not a win for the lower-numbered player — `leader()` supplies the same tie rule
+`winner()` uses, which is why it was extracted rather than duplicated.
+
+**Why token-holders do not extend the game.** "No legal placement" deliberately
+does *not* mean "no legal action": a player holding tokens could still bomb or
+switch, and either can free ground and reopen the board. Measured across 6 full
+AI games, every player was at zero tokens in 4 of them, and in the one case with
+real bombs left that player was already ahead 1602 to 143. Waiting for tokens to
+run out instead would let one player sit on a single unusable token and stall
+the game forever — the exact failure this condition exists to fix.
 
 > Reachability note (plain-area figures, pre-bonus): greedy local play never
 > exceeds ~44% of the board *claimed in total*. It is reachable by deliberately

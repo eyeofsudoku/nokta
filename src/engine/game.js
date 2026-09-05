@@ -101,6 +101,32 @@ export class Game {
     return pl;
   }
 
+  // The two ways a game ends.
+  //
+  // Returns a SHAPE, not a number, because winner 0 is ambiguous otherwise:
+  // {over:true, winner:0} is a genuine draw and {over:false, winner:0} is a
+  // game still in progress. A caller reading a bare 0 as "keep playing" would
+  // never end a drawn game.
+  //
+  //   'threshold' — someone passed totalArea()/np on winScore
+  //   'exhausted' — no legal placement remains; highest winScore takes it
+  //
+  // "No legal placement" deliberately does NOT mean "no legal action": a
+  // player holding tokens could still bomb or switch, and either can free
+  // ground and reopen the board. Measured across 6 full AI games, every
+  // player was at zero tokens in 4 of them, and in the one case with real
+  // bombs left that player was already ahead 1602 to 143. Waiting for tokens
+  // to run out instead would let one player sit on a single unusable token
+  // and stall the game forever, which is the exact failure this condition
+  // exists to fix.
+  gameResult(){
+    const w = this.winner();
+    if (w) return { over: true, winner: w, reason: 'threshold' };
+    if (this.hasLegalMove()) return { over: false, winner: 0, reason: null };
+    const { pl, tied } = this.leader();
+    return { over: true, winner: tied ? 0 : pl, reason: 'exhausted' };
+  }
+
   // Is any placement legal anywhere? canPlace() takes no player — a point is
   // open or it isn't — so this is one answer for the whole board, not per
   // player. Used for the "board is full" end condition.
