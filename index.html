@@ -768,14 +768,36 @@ function doSwitch(gx, gy, pl){
   return true;
 }
 
+// "Blue 210 \u00b7 Red 143" \u2014 winScore, not area, because that is what decides it
+function scoreLine(){
+  return game.players()
+    .map(p => `${playerName(p)} ${fmt(game.winScore(p))}`)
+    .join(' \u00b7 ');
+}
+
+// Reads gameResult(), which distinguishes the three endings a bare winner
+// number cannot: winner 0 with over:true is a DRAW, not a game in progress.
+// Never decide to stop on the truthiness of the winner.
 function checkWin(){
-  const w = game.winner();
-  if (!w) return false;
+  const res = game.gameResult();
+  if (!res.over) return false;
   gameOver = true;
-  locked = true;
-  const share = Math.round(100 / game.np);
-  setPill(`\u{1F3C6} ${playerName(w)} wins \u2014 over ${share}% of the board`, false);
-  pill.style.color = COL[w];
+  locked = true;                       // same lock the disconnect path uses
+  if (res.reason === 'threshold'){
+    // No board percentage here: colonized ground counts double toward
+    // winScore, so "over 50% of the board" became a falsehood the moment
+    // COL_WIN_BONUS landed. Show the score that actually decided it.
+    const need = game.totalArea() / game.np;
+    setPill(`\u{1F3C6} ${playerName(res.winner)} wins \u2014 score ${fmt(game.winScore(res.winner))} `
+          + `of ${fmt(need)} needed`, false);
+    pill.style.color = COL[res.winner];
+  } else if (res.winner){
+    setPill(`\u{1F3C6} ${playerName(res.winner)} wins \u2014 board full \u2014 ${scoreLine()}`, false);
+    pill.style.color = COL[res.winner];
+  } else {
+    setPill(`\u{1F91D} Draw \u2014 board full, scores level \u2014 ${scoreLine()}`, false);
+    pill.style.color = '';             // no winner colour to show
+  }
   updateExtras();          // closes the picker and disarms — the game is over
   dirty = true;
   return true;
@@ -838,6 +860,9 @@ function aiTurn(){
       const r = game.place(mv.x, mv.y, AIP);
       afterPlace(mv.x, mv.y, AIP, r, before);
       panToIfOffscreen(mv.x, mv.y);
+      // This path bypasses advanceTurn(), so without this the AI could win
+      // or fill the board and play would simply carry on.
+      if (checkWin()) return;
     }
     aiMade++;
     if (mv && aiMade < aiTotal){
