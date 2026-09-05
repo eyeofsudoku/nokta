@@ -139,6 +139,17 @@
   #abilityClose{margin-top:13px;width:100%;min-height:44px;font-size:12px;font-weight:700}
   @media (max-width:480px){ #abilityList{grid-template-columns:1fr} }
 
+  /* Testing only — revealed by ?admin=1, and inert in any online game. */
+  #adminPanel{margin-top:9px;padding:9px 10px;border-radius:9px;
+    background:rgba(195,31,63,.07);border:1px dashed rgba(195,31,63,.4)}
+  #adminPanel[hidden]{display:none}
+  #adminPanel h2{font-family:var(--font-display);font-size:12px;margin:0 0 6px;color:var(--red)}
+  #adminPanel button{font-size:11px;font-weight:700;margin:0 4px 4px 0;min-height:30px}
+  #adminOut{font:11px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;
+    white-space:pre;overflow-x:auto;color:var(--ink);margin-top:6px}
+  #adminWarn{font-size:11px;font-weight:700;color:var(--red);margin-top:5px}
+  #adminWarn[hidden]{display:none}
+
   #netBox{margin-top:9px;padding:9px 10px;border-radius:9px;background:rgba(32,38,58,.06)}
   #netBox.isHidden{display:none}
   #netStatus{font-size:11px;font-weight:600;color:var(--ink-soft);margin-bottom:7px}
@@ -290,6 +301,14 @@
     </select>
   </div>
 
+  <div class="panel" id="adminPanel" hidden>
+    <h2>⚠ Admin (testing)</h2>
+    <button type="button" id="adminGrantSwitch">+1 switch token</button>
+    <button type="button" id="adminGrantBomb">+bomb worth</button>
+    <div id="adminWarn" hidden>Disabled — an online peer is connected.</div>
+    <div id="adminOut"></div>
+  </div>
+
   <div class="panel" id="logPanel" hidden>
     <h2>Capture log</h2>
     <div id="logList"></div>
@@ -318,7 +337,7 @@
 /* Engine lives in src/engine/ — DOM-free and independently testable.
    ES modules need a real server: `python3 -m http.server 8000`.
    The UI below is unchanged and reads these via module scope. */
-import { HUMAN, AIP, GREEN } from './src/engine/constants.js';
+import { HUMAN, AIP, GREEN, COL_PER_SWITCH, BOMB_COST } from './src/engine/constants.js';
 import { ABILITIES, abilityByMode, anyAffordable, tokenProgress }
   from './src/ui/abilities.js';
 import { Game } from './src/engine/game.js';
@@ -477,6 +496,61 @@ abilityClose.addEventListener('click', closeAbilities);
 // backdrop only — a click inside the card must not close it
 abilityModal.addEventListener('click', e => { if (e.target === abilityModal) closeAbilities(); });
 
+/* ---------------- admin panel (TESTING ONLY) -----------------------
+   Off unless ?admin=1 is in the URL, and never a visible control — it must
+   be impossible to reach by accident in a real game.
+
+   HARD-DISABLED in anything online. Only actions cross the wire, never board
+   state, so granting tokens locally would desync every peer instantly and
+   silently: their engines would replay the same action stream and get a
+   different board. The engine's determinism is what the whole netcode rests
+   on. The URL flag alone is NOT enough — connection state is re-checked at
+   the point of use, because a room can be created after the page loads. */
+const ADMIN = new URLSearchParams(location.search).get('admin') === '1';
+const adminPanel = document.getElementById('adminPanel');
+const adminOut = document.getElementById('adminOut');
+const adminWarn = document.getElementById('adminWarn');
+const adminGrantSwitch = document.getElementById('adminGrantSwitch');
+const adminGrantBomb = document.getElementById('adminGrantBomb');
+
+// Any sign of a peer at all, not just a completed handshake — a half-open
+// room still has peers who will replay our action stream.
+function netActive(){
+  return mode === 'online' || !!net.peer || !!net.conn ||
+         Object.keys(net.conns).length > 0 || net.connected;
+}
+function adminAllowed(){ return ADMIN && !netActive(); }
+
+// Tokens come from lifetime colonization, so granting means topping up
+// colEarnedQ. It only ever rises, so this cannot break its monotonicity.
+function adminGrant(tokens){
+  if (!adminAllowed()) return;
+  game.colEarnedQ[currentPlayer] += tokens * COL_PER_SWITCH;
+  updateHUD(); updateExtras(); dirty = true;
+}
+
+function updateAdmin(){
+  if (!ADMIN) return;
+  const blocked = netActive();
+  adminWarn.hidden = !blocked;
+  adminGrantSwitch.disabled = blocked;
+  adminGrantBomb.disabled = blocked;
+
+  const need = game.totalArea() / game.np;
+  const res = game.gameResult();
+  const rows = game.players().map(p =>
+    `  ${playerName(p).padEnd(8).slice(0,8)} area ${fmt(game.area(p)).padStart(7)}` +
+    `  col ${fmt(game.colArea(p)).padStart(7)}` +
+    `  score ${fmt(game.winScore(p)).padStart(7)}` +
+    `  tok ${String(game.switchesFor(p)).padStart(3)}`);
+  adminOut.textContent = [
+    `board ${game.N}x${game.N}   need ${fmt(need)}   moves left ${movesLeft}`,
+    ...rows,
+    `  legal placement: ${game.hasLegalMove() ? 'yes' : 'NO — exhausted'}`,
+    `  gameResult: over=${res.over} winner=${res.winner} reason=${res.reason}`,
+  ].join('\n');
+}
+
 const pill  = document.getElementById('turnPill');
 const muteBtn = document.getElementById('muteBtn');
 const logBtn = document.getElementById('logBtn');
@@ -569,6 +643,7 @@ function updateHUD(){
     mGreen.textContent = metaLine(GREEN);
   }
   updateExtras();
+  updateAdmin();
 }
 function setPill(text, ai){
   pill.textContent = text;
@@ -1669,6 +1744,22 @@ function requestNewGame(){
 }
 document.getElementById('newBtn').addEventListener('click', requestNewGame);
 sizeSel.addEventListener('change', requestNewGame);
+
+// Deferred to here on purpose: this block touches sizeSel, which is a const
+// declared further up the file, so running it earlier is a TDZ crash that
+// takes the whole page down under ?admin=1.
+if (ADMIN){
+  adminPanel.hidden = false;
+  // Small boards: a 20x20 needs ~439 turns to exhaust, so the board-full and
+  // draw endings are untestable without one of these.
+  for (const n of [6, 8, 10]){
+    const o = document.createElement('option');
+    o.value = String(n); o.textContent = `${n} \u00d7 ${n} (admin)`;
+    sizeSel.insertBefore(o, sizeSel.firstChild);
+  }
+  adminGrantSwitch.addEventListener('click', () => adminGrant(1));
+  adminGrantBomb.addEventListener('click', () => adminGrant(BOMB_COST));
+}
 
 const modeSeg = document.getElementById('modeSeg');
 const diffSeg = document.getElementById('diffSeg');
