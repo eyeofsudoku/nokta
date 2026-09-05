@@ -1,7 +1,7 @@
 /* Engine invariants. DOM-free, no dependencies.
    Run: node test/invariants.test.js                                        */
 import { Game } from '../src/engine/game.js';
-import { LASER_LEN, LASER_COST } from '../src/engine/constants.js';
+import { LASER_LEN, LASER_COST, COL_WIN_BONUS } from '../src/engine/constants.js';
 import { LASER_DIRS } from '../src/engine/geometry.js';
 import { chooseAIMove } from '../src/engine/ai.js';
 
@@ -311,6 +311,84 @@ test('replaying one action stream on fresh engines is byte-identical', () => {
     for (const [t,x,y,pl] of actions) G.place(x, y, pl);
     assert(snapshot(G) === first, 'replay ' + rep + ' diverged');
   }
+});
+
+/* ---- win condition -------------------------------------------------- */
+
+// winner() reads only the tallies, but set owner/colFlag too so the board
+// still satisfies the colQ ledger invariant while we probe the arithmetic.
+function grantGround(G, pl, quarters, { colonized = false, from = 0 } = {}){
+  for (let i = 0; i < quarters; i++){
+    const c = from + i;
+    G.owner[c] = pl;
+    if (colonized) G.colFlag[c] = 1;
+  }
+  G.scoreQ[pl] = quarters;
+  G.colQ[pl] = colonized ? quarters : 0;
+  return from + quarters;
+}
+
+test('win: triggers strictly above totalArea()/np, never at it', () => {
+  const N = 20, quartersPerArea = 4;
+  const need = (N * N) / 2;                       // 200 area, 2 players
+  const at = new Game(N, 2);
+  grantGround(at, 1, need * quartersPerArea);     // exactly the threshold
+  assert(at.area(1) === need, `setup: expected area ${need}, got ${at.area(1)}`);
+  assert(at.winner() === 0, 'exactly at the threshold must NOT win');
+
+  const over = new Game(N, 2);
+  grantGround(over, 1, need * quartersPerArea + 1);   // one quarter-cell more
+  assert(over.area(1) > need, 'setup: should be over the threshold');
+  assert(over.winner() === 1, 'strictly above the threshold must win');
+});
+
+test('win: plain ground at the threshold does not win, however much of it', () => {
+  // No colFlag anywhere, so winScore collapses to plain area: fencing empty
+  // space can never win on less than a full 1/np share.
+  for (const np of [2, 3]){
+    const G = new Game(20, np);
+    const need = G.totalArea() / np;
+    grantGround(G, 1, Math.floor(need * 4));
+    assert(G.colArea(1) === 0, 'setup: nothing should be colonized');
+    assert(G.winScore(1) === G.area(1), 'plain ground must score exactly its area');
+    assert(G.winner() === 0, `${np}p: plain ground at the threshold must not win`);
+  }
+});
+
+test('win: fully colonized holdings win just above (1/np)/(1+COL_WIN_BONUS)', () => {
+  const np = 2, N = 20;
+  const G0 = new Game(N, np);
+  const total = G0.totalArea();
+  const frac = (1 / np) / (1 + COL_WIN_BONUS);        // 0.25 at BONUS = 1
+  const edgeQ = Math.round(total * frac * 4);         // quarter-cells at the floor
+
+  const at = new Game(N, np);
+  grantGround(at, 1, edgeQ, { colonized: true });
+  assert(at.winScore(1) === total / np, 'setup: should sit exactly on the threshold');
+  assert(at.winner() === 0, 'exactly at the colonized floor must NOT win');
+
+  const over = new Game(N, np);
+  grantGround(over, 1, edgeQ + 1, { colonized: true });
+  assert(over.winner() === 1, 'just above the colonized floor must win');
+  const pct = 100 * over.area(1) / total;
+  assert(pct > 25 && pct < 26, `expected a win at just over 25% of the board, got ${pct.toFixed(2)}%`);
+  // and it is genuinely below the plain-area threshold — that is the point
+  assert(over.area(1) < total / np, 'the winner should hold less than a 1/np share');
+});
+
+test('win: two players tied above the threshold returns 0, not player 1', () => {
+  const G = new Game(20, 3);
+  const need = G.totalArea() / 3;                  // 133.33 area
+  const half = G.owner.length / 2;                 // 800 quarters = 200 area each
+  const next = grantGround(G, 1, half, { from: 0 });
+  grantGround(G, 2, half, { from: next });
+  assert(G.winScore(1) === G.winScore(2), 'setup: the two should be exactly level');
+  assert(G.winScore(1) > need, 'setup: both should be over the threshold');
+  assert(G.winner() === 0, 'a tie must not hand the win to the lower-numbered player');
+
+  // break the tie by one quarter-cell and the leader is declared
+  G.scoreQ[2] += 1;
+  assert(G.winner() === 2, 'a strict leader above the threshold must win');
 });
 
 /* ---- laser ---------------------------------------------------------- */

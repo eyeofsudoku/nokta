@@ -17,4 +17,12 @@ export const BOMB_SIZE      = 5;    // blast is BOMB_SIZE x BOMB_SIZE squares; k
 export const LASER_LEN      = 10;   // ray length in POSITIONS, not dots landed
 export const LASER_COST     = 5;    // switch tokens spent to fire one laser
 
+// Colonized ground counts this much EXTRA toward the win condition, on top of
+// the once it already counts via scoreQ. 1 = colonized ground is worth double
+// a plain square. Consequence: a player whose holdings are ENTIRELY colonized
+// wins at (1/np)/(1+COL_WIN_BONUS) of the board — 25% in a 2-player game at 1.
+// Intended: taking a quarter of the board off your opponent is a win; fencing
+// half of empty ground is not.
+export const COL_WIN_BONUS  = 1;
+
 export function oppOf(p){ return p === 1 ? 2 : 1; }   // 2-player only (AI paths)

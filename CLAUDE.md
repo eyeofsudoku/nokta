@@ -15,7 +15,8 @@ Deployed at `https://eyeofsudoku.github.io/nokta/` via GitHub Pages.
 ```
 index.html            shell + UI/renderer/netcode (not yet extracted)
 src/engine/
-  constants.js        COL_PER_SWITCH, COL_PER_MOVE, BOMB_COST, BOMB_SIZE, oppOf
+  constants.js        COL_PER_SWITCH, COL_PER_MOVE, BOMB_COST, BOMB_SIZE,
+                      LASER_LEN, LASER_COST, COL_WIN_BONUS, oppOf
   geometry.js         index maths: pi/inP/inS, incidentCells, incidentEdges,
                       blastBounds, inBlast, cellNeighbours
   game.js             the Game class — place, flood, commitCapture, switchDot,
@@ -304,16 +305,44 @@ const COL_PER_SWITCH = 40;   // quarter-cells of lifetime colonization per token
 const COL_PER_MOVE   = 400;  // quarter-cells of live colonization per bonus move (400 = 100 area)
 const BOMB_COST      = 5;    // tokens per bomb
 const BOMB_SIZE      = 5;    // blast is SIZE x SIZE squares; keep ODD
+const COL_WIN_BONUS  = 1;    // colonized ground counts this much EXTRA to win
 ```
 
-Turn order is `nextOf(p) = (p % np) + 1`. Win condition: hold more than
-`totalArea() / np` of the **whole board** (half for 2 players, a third for 3).
+Turn order is `nextOf(p) = (p % np) + 1`.
 
-> Reachability note: greedy local play never exceeds ~44% of the board *claimed
-> in total*, so the win rule effectively cannot trigger through ordinary play.
-> It is reachable by deliberately drawing one large enclosing loop, which
-> captures 81–97% — but a loop that size costs ~72 moves on a 20x20 board and
-> ~592 on 150x150. Board sizes 20/30/50 exist so the win condition is live.
+### Win condition — a score, not a share
+
+You win by **scoring** more than `totalArea() / np`, which is *not* the same as
+holding that share of the board:
+
+```
+winScore(pl) = area(pl) + colArea(pl) * COL_WIN_BONUS
+```
+
+`colQ` is a **subset** of `scoreQ`, so this is a deliberate bonus on ground
+already counted once — not a second tally. Colonized ground is therefore worth
+double a plain square at `COL_WIN_BONUS = 1`, and a player whose holdings are
+*entirely* colonized wins at **`(1/np)/(1+COL_WIN_BONUS)`** of the board — 25% in
+a 2-player game.
+
+That is the intent: **taking a quarter of the board off your opponent is a win;
+fencing half of empty ground is not.** Colonization already drives the token
+economy, and this puts it in the victory condition too.
+
+Two consequences worth knowing:
+
+- The bonus makes it possible for **two players to cross the line at once**,
+  which the plain-area rule could not. `winner()` therefore declares only a
+  strict single leader and returns 0 on a tie — never the lower-numbered player.
+- The old reachability note below is now conservative. Greedy local play still
+  rarely wins on area alone, but a bomb-and-switch game that colonizes heavily
+  reaches the line at half the ground it used to need.
+
+> Reachability note (plain-area figures, pre-bonus): greedy local play never
+> exceeds ~44% of the board *claimed in total*. It is reachable by deliberately
+> drawing one large enclosing loop, which captures 81–97% — but a loop that size
+> costs ~72 moves on a 20x20 board and ~592 on 150x150. Board sizes 20/30/50
+> exist so the win condition is live.
 
 ## Netcode
 

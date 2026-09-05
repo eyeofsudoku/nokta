@@ -17,7 +17,7 @@
 'use strict';
 
 import { COL_PER_SWITCH, COL_PER_MOVE, BOMB_COST, BOMB_SIZE,
-         LASER_LEN, LASER_COST } from './constants.js';
+         LASER_LEN, LASER_COST, COL_WIN_BONUS } from './constants.js';
 import {
   pi, inP, inS, incidentCells, incidentEdges,
   blastBounds, inBlast, cellNeighbours, LASER_DIRS
@@ -70,11 +70,38 @@ export class Game {
   bombsFor(pl){ return Math.floor(this.switchesFor(pl) / BOMB_COST); }
 
   totalArea(){ return this.N * this.N; }
-  // Win: hold more than a 1/np share of the WHOLE board (half for 2, third for 3).
+  // Win: score more than a 1/np share of the WHOLE board. Not the same as
+  // HOLDING that share — colonized ground is worth COL_WIN_BONUS extra, so
+  // ground taken off an opponent counts for more than ground fenced out of
+  // empty space.
+  //
+  // colQ is a SUBSET of scoreQ, so this adds a deliberate bonus on top of
+  // ground already counted once — not a separate tally.
+  winScore(pl){ return this.area(pl) + this.colArea(pl) * COL_WIN_BONUS; }
+
   winner(){
     const need = this.totalArea() / this.np;
-    for (let p = 1; p <= this.np; p++) if (this.area(p) > need) return p;
-    return 0;
+    // The bonus makes it possible for two players to cross at once, which the
+    // plain-area rule could not. Declare only a strict single leader.
+    let best = 0, bestS = -1, tied = false;
+    for (let p = 1; p <= this.np; p++){
+      const s = this.winScore(p);
+      if (s > bestS){ bestS = s; best = p; tied = false; }
+      else if (s === bestS){ tied = true; }
+    }
+    if (bestS <= need || tied) return 0;
+    return best;
+  }
+
+  // Is any placement legal anywhere? canPlace() takes no player — a point is
+  // open or it isn't — so this is one answer for the whole board, not per
+  // player. Used for the "board is full" end condition.
+  hasLegalMove(){
+    const P = this.P;
+    for (let y = 0; y < P; y++)
+      for (let x = 0; x < P; x++)
+        if (this.canPlace(x, y)) return true;
+    return false;
   }
 
   /* ---- point <-> incident quarter-cells -------------------------- */
